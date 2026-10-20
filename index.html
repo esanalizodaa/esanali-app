@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Esanalibot</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:var(--tg-theme-bg-color,#fff);--tx:var(--tg-theme-text-color,#111);--hint:var(--tg-theme-hint-color,#888);
+--btn:var(--tg-theme-button-color,#2a8bf2);--btx:var(--tg-theme-button-text-color,#fff);--card:var(--tg-theme-secondary-bg-color,#f2f3f5)}
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;gap:6px;overflow-x:auto;padding:8px;position:sticky;top:0;background:var(--bg);z-index:2}
+header button{flex:0 0 auto;border:0;border-radius:18px;padding:8px 12px;background:var(--card);color:var(--tx)}
+header button.on{background:var(--btn);color:var(--btx)}
+section{display:none;padding:10px}section.on{display:block}
+.card{background:var(--card);border-radius:12px;padding:12px;margin:8px 0}
+input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--hint);background:var(--bg);color:var(--tx);font:inherit}
+.row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
+.b{border:0;border-radius:10px;padding:10px;background:var(--btn);color:var(--btx);font:inherit;width:100%;margin-top:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid .b{margin:0}
+.msg{white-space:pre-wrap;margin:6px 0;padding:8px 10px;border-radius:10px;max-width:92%}
+.me{background:var(--btn);color:var(--btx);margin-left:auto}.bot{background:var(--card)}
+.hint{color:var(--hint);font-size:13px}.item{padding:8px;border-bottom:1px solid var(--card);cursor:pointer}
+</style></head><body>
+<header id="tabs"></header>
+<section id="dl"><div class="card"><b data-i="dl_t">Download center</b>
+<p class="hint" data-i="dl_h">Paste a post link or type a song / video name. The file arrives in the chat (quality picker there).</p>
+<input id="dlq" placeholder="…"><div class="row"><button class="b" onclick="dl('pick')" data-i="find">Find / choose quality</button></div>
+<div class="row"><button class="b" onclick="dl('a')">🎵 MP3</button><button class="b" onclick="dl('v')">🎬 Video</button></div></div>
+<div id="ytres"></div></section>
+<section id="ai"><div id="chat"></div><textarea id="aiq" rows="2" placeholder="…"></textarea>
+<div class="row"><button class="b" onclick="askAI()" data-i="send">Send</button><button class="b" onclick="newChat()">🧹 /new</button></div></section>
+<section id="search"><div class="card"><b data-i="s_t">Web search</b><input id="sq" placeholder="…">
+<button class="b" onclick="webSearch()" data-i="search">Search</button></div><div id="sres"></div></section>
+<section id="tools"><div class="grid" id="toolgrid"></div><div id="tres" class="card" style="display:none"></div></section>
+<section id="games"><div class="grid" id="gamegrid"></div></section>
+<section id="set"><div class="card"><label data-i="lang">Language</label><select id="lang">
+<option value="">Auto</option><option>tr</option><option>en</option><option>ru</option><option>tg</option><option>uz</option><option>fa</option><option>de</option><option>ar</option></select>
+<label data-i="persona">AI personality</label><select id="persona"><option>friend</option><option>teacher</option><option>pro</option><option>funny</option><option>poet</option><option>coder</option><option>doctor</option></select>
+<label data-i="mode">Text mode</label><select id="text_mode"><option value="search">🔎 YouTube search</option><option value="ai">🤖 AI chat</option></select>
+<label><input type="checkbox" id="voice_reply" style="width:auto"> 🔊 Voice replies</label><br>
+<label><input type="checkbox" id="picker" style="width:auto"> 🎚 Quality picker</label><br>
+<label><input type="checkbox" id="private" style="width:auto"> 🕶 Private mode</label>
+<label data-i="city">City</label><input id="city"><button class="b" onclick="saveSet()" data-i="save">Save</button></div>
+<p class="hint" id="mode"></p></section>
+<script>
+const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+const API = new URLSearchParams(location.search).get('api');
+const L = (tg.initDataUnsafe.user||{}).language_code||'en';
+const TABS=[['dl','📥'],['ai','🤖'],['search','🌍'],['tools','🛠'],['games','🎮'],['set','⚙️']];
+const NAMES={en:{dl:'Download',ai:'AI',search:'Search',tools:'Tools',games:'Games',set:'Settings'},
+tr:{dl:'İndir',ai:'Yapay zekâ',search:'Ara',tools:'Araçlar',games:'Oyunlar',set:'Ayarlar'},
+ru:{dl:'Скачать',ai:'ИИ',search:'Поиск',tools:'Инструменты',games:'Игры',set:'Настройки'},
+tg:{dl:'Боргирӣ',ai:'ЗС',search:'Ҷустуҷӯ',tools:'Асбобҳо',games:'Бозиҳо',set:'Танзимот'},
+uz:{dl:'Yuklash',ai:'AI',search:'Qidiruv',tools:'Vositalar',games:"O'yinlar",set:'Sozlamalar'}};
+const N=NAMES[L]||NAMES.en;
+const tabs=document.getElementById('tabs');
+TABS.forEach(([id,e],i)=>{const b=document.createElement('button');b.textContent=e+' '+N[id];b.onclick=()=>show(id);b.id='t_'+id;tabs.appendChild(b)});
+function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));
+document.querySelectorAll('header button').forEach(b=>b.classList.toggle('on',b.id=='t_'+id))}
+show('dl');
+document.getElementById('mode').textContent = API ? '🟢 Live mode (results inside the app)' : '🟡 Chat mode: results are sent to the chat with the bot';
+function noLinks(t){return String(t||'').replace(/\b(?:https?:\/\/|www\.)\S+/gi,'')}
+async function call(d){
+  if(API){try{const r=await fetch(API.replace(/\/$/,'')+'/api',{method:'POST',headers:{'Content-Type':'application/json','X-Init-Data':tg.initData},body:JSON.stringify(d)});
+    return await r.json()}catch(e){return {error:'offline'}}}
+  if(!tg.sendData){return {error:'no sendData'}}
+  tg.sendData(JSON.stringify(d)); return {sent:true};   // closes the app; the bot answers in the chat
+}
+function dl(kind){const q=document.getElementById('dlq').value.trim();if(!q)return;
+  call({a:'dl',q,kind}).then(r=>{tg.showAlert?tg.showAlert('📥 ✓'):0})}
+async function ytSearch(q){const r=await call({a:'yt',q});const box=document.getElementById('ytres');box.innerHTML='';
+  (r.items||[]).forEach(it=>{const d=document.createElement('div');d.className='item';d.textContent='🎬 '+it.title+' ('+it.dur+')';
+  d.onclick=()=>call({a:'dl',q:it.id,kind:'pick'}).then(()=>tg.showAlert('📥 ✓'));box.appendChild(d)})}
+document.getElementById('dlq').addEventListener('keyup',e=>{if(e.key=='Enter'&&API){const q=e.target.value.trim();if(q&&!/^https?:|www\./i.test(q))ytSearch(q)}});
+function addMsg(t,me){const d=document.createElement('div');d.className='msg '+(me?'me':'bot');d.textContent=noLinks(t).replace(/<[^>]+>/g,'');document.getElementById('chat').appendChild(d);d.scrollIntoView()}
+async function askAI(){const el=document.getElementById('aiq');const q=el.value.trim();if(!q)return;el.value='';addMsg(q,true);
+  const r=await call({a:'ai',q});if(r.text)addMsg(r.text);else if(r.error)addMsg('⚠️ '+r.error)}
+function newChat(){document.getElementById('chat').innerHTML='';call({a:'tool',t:'ai_new'})}
+async function webSearch(){const q=document.getElementById('sq').value.trim();if(!q)return;const box=document.getElementById('sres');
+  box.innerHTML='<div class="card">⏳</div>';const r=await call({a:'web',q});
+  box.innerHTML='';const c=document.createElement('div');c.className='card';c.style.whiteSpace='pre-wrap';
+  c.textContent=r.text?noLinks(r.text).replace(/<[^>]+>/g,''):(r.sent?'📨':'⚠️ '+(r.error||''));box.appendChild(c);
+  (r.sources||[]).forEach(s=>{const d=document.createElement('div');d.className='hint';d.textContent='📚 '+noLinks(s);box.appendChild(d)})}
+const TOOLS=[['t_video','🎬 Video tools'],['t_note','⭕ Round video'],['t_audio','🎵 Audio FX'],['t_rembg','✂️ Remove BG'],
+['t_qr','🔳 QR create'],['t_qrread','📷 QR read'],['t_img2pdf','🖼→📄 PDF'],['t_files','📄 Converter'],['t_link','🛡 Link check'],
+['t_uid','🆔 ID & age'],['t_sticker','🧩 Sticker pack'],['ai_trfile','🌐 Translate file'],['p_remind','⏰ Reminder'],['p_note','📝 Note'],
+['p_expense','💸 Expense'],['p_report','📊 Report']];
+const INFO=[['rates','💱 Rates'],['crypto','🪙 Crypto/Gold'],['weather','🌤 Weather'],['news','📰 News']];
+const tg_=document.getElementById('toolgrid');
+INFO.forEach(([a,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=async()=>{
+  const r=await call({a});const box=document.getElementById('tres');if(r.text){box.style.display='block';box.style.whiteSpace='pre-wrap';box.textContent=noLinks(r.text).replace(/<[^>]+>/g,'')}};tg_.appendChild(b)});
+TOOLS.forEach(([t,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=()=>{call({a:'tool',t});if(API)tg.close()};tg_.appendChild(b)});
+const GAMES=[['f_trivia','❓ Trivia'],['f_million','💰 Millionaire'],['f_hangman','🪢 Hangman'],['f_riddle','🧩 Riddle'],['f_dice','🎲 Dice'],['l_quiz','🧠 Quiz'],['l_word','📖 Word'],['f_score','🏆 Score']];
+const gg=document.getElementById('gamegrid');
+GAMES.forEach(([g,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=()=>{call({a:'game',g});if(API)tg.close()};gg.appendChild(b)});
+async function loadSet(){if(!API)return;const r=await call({a:'get'});const s=r.settings||{};
+  for(const k of ['persona','text_mode','city'])if(s[k]!=null)document.getElementById(k).value=s[k];
+  document.getElementById('lang').value=s.lang||'';for(const k of ['voice_reply','picker'])document.getElementById(k).checked=!!s[k];
+  document.getElementById('private').checked=!!s.private}
+loadSet();
+async function saveSet(){const v=id=>document.getElementById(id);
+  const sets=[['lang',v('lang').value||null],['persona',v('persona').value],['text_mode',v('text_mode').value],['voice_reply',v('voice_reply').checked],
+   ['picker',v('picker').checked],['private',v('private').checked?10:0],['city',v('city').value]];
+  if(API){for(const [k,val] of sets)await call({a:'set',k,v:val});tg.showAlert('✅')}
+  else{tg.sendData(JSON.stringify({a:'set',k:'bulk',v:sets}))}}
+</script></body></html>
