@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- esanali-build:2.3 · 2.3.1 -->
+<!-- esanali-build:2.3 · 2.3.2 -->
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Esanalibot</title>
@@ -70,6 +70,7 @@ input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px soli
 <input type="color" id="accent" value="#2a8bf2" onchange="applyTheme()" style="height:44px"></div><p class="hint" id="mode"></p></section>
 
 <section id="admin"><div class="card" id="apanel">…</div>
+<div class="card" id="astats">…</div>
 <div class="card"><b>📦 Update</b><input type="file" id="pkg" accept=".gz,.tgz,application/gzip"><input id="pkgsha" placeholder="SHA-256 (optional)">
 <button class="b" onclick="admUpdate()">⬆️ Update</button>
 <div class="row"><button class="b b2" onclick="admCmd('adm_rollback')">⏪ Rollback</button><button class="b b2" onclick="admCmd('adm_restart')">🔄 Restart</button></div>
@@ -243,10 +244,20 @@ function applyTheme(){const th=$('theme').value,a=$('accent').value,r=document.d
   ['--bg','--tx','--card','--hint'].forEach((k,i)=>P?r.setProperty(k,P[i]):r.removeProperty(k));r.setProperty('--btn',a)}
 (function(){const th=localStorage.getItem('es_theme'),a=localStorage.getItem('es_accent');if(th)$('theme').value=th;if(a)$('accent').value=a;if(th||a)applyTheme()})();
 // ---- admin ----
-async function loadAdmin(){const x=await call({a:'adm_info'});const p=$('apanel');if(x.error){p.textContent='⛔ '+x.error;return}
+async function loadAdmin(){loadStats();const x=await call({a:'adm_info'});const p=$('apanel');if(x.error){p.textContent='⛔ '+x.error;return}
   p.innerHTML='';p.append(el('b',null,'v'+x.version+' · 👥 '+x.users+' · 24h '+x.active24+' · jobs '+x.jobs),
    el('div','hint','⏱ '+Math.round(x.uptime/60)+' min · '+(x.tunnel?'🟢 tunnel':'🔴 no tunnel')+' · '+x.frontend+' · access '+x.access+' · force-sub '+(x.force_sub||'-')),
    el('pre','pre',JSON.stringify(x.stats,null,1)),el('div','hint','backups: '+(x.backups||[]).join(', ')));const dg=await call({a:'diag'});if(dg.text)p.append(el('pre','pre',dg.text))}
+async function loadStats(){const s=await call({a:'adm_stats'});const b=$('astats');if(s.error){b.textContent='⚠️ '+s.error;return}b.innerHTML='';
+  const kv=(k,v)=>{const d=el('div');d.append(el('span','hint',k+' '),el('b',null,String(v)));return d};
+  const g=el('div','grid');[['👥 today',s.today],['7d',s.d7],['30d',s.d30],['all',s.all],['🆕 today',s.new_today],['🆕 week',s.new_week],['👨‍👩‍👧 groups',s.groups],['events today',s.events_today]].forEach(([k,v])=>g.append(kv(k,v)));b.append(el('b',null,'📊 Stats'),g);
+  const mx=Math.max(1,...s.chart.map(c=>c.n));const ch=el('div');ch.style.cssText='display:flex;align-items:flex-end;gap:3px;height:120px;margin:12px 0 2px';
+  s.chart.forEach(c=>{const col=el('div');col.style.cssText='flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%';
+    const v=el('div','hint',c.n||'');v.style.fontSize='10px';const bar=el('div');bar.style.cssText='width:100%;border-radius:4px 4px 0 0;background:var(--btn);height:'+Math.max(2,c.n/mx*95)+'px';bar.title=c.day+': '+c.n;col.append(v,bar);ch.append(col)});
+  const lab=el('div','hint',s.chart[0].day.slice(5)+' … '+s.chart[s.chart.length-1].day.slice(5)+' (DAU 14d)');b.append(ch,lab);
+  const list=(title,arr)=>{b.append(el('b',null,title));const d=el('div','hint pre',(arr||[]).map((x,i)=>(i+1)+'. '+x.k+' — '+x.n).join('\n')||'—');b.append(d)};
+  list('🔥 today',s.feat_today);list('📅 week',s.feat_week);b.append(el('b',null,'🌐 langs'),el('div','hint',(s.langs||[]).map(x=>x.k+' '+x.n).join(' · ')));
+  const tb=el('button','b b2','🕛 23:59 daily: '+(s.daily?'ON':'OFF'));tb.onclick=async()=>{await call({a:'adm_stats',daily_set:!s.daily});loadStats()};b.append(tb)}
 async function admCmd(a){if(!confirm(a+'?'))return;const r=await call({a});tg.showAlert(r.ok?'✅ '+(r.text||''):'⚠️ '+(r.error||''))}
 function admUpdate(){const f=$('pkg').files[0];if(!f)return;const fr=new FileReader();fr.onload=async()=>{tg.showAlert('⬆️ …');
   const r=await call({a:'adm_update',file:fr.result,sha:$('pkgsha').value.trim()},900000);tg.showAlert(r.ok?'✅ restart':'⚠️ '+(r.error||'failed'))};fr.readAsDataURL(f)}
