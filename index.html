@@ -27,7 +27,11 @@ input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px soli
 <div class="row"><button class="b" onclick="dl('a')">🎵 MP3</button><button class="b" onclick="dl('v')">🎬 Video</button></div></div>
 <div id="ytres"></div></section>
 <section id="ai"><div id="chat"></div><textarea id="aiq" rows="2" placeholder="…"></textarea>
-<div class="row"><button class="b" onclick="askAI()" data-i="send">Send</button><button class="b" onclick="newChat()">🧹 /new</button></div></section>
+<div class="row"><button class="b" onclick="askAI()" data-i="send">Send</button><button class="b" onclick="newChat()">🧹 /new</button></div>
+<button class="b" id="vbtn" onclick="toggleVoice()">🎙 Live voice chat</button><p class="hint" id="vhint"></p></section>
+<section id="img"><div class="card"><b>🎨 Image</b><textarea id="iq" rows="2" placeholder="…"></textarea>
+<button class="b" onclick="genImg()">🎨 Create</button><p class="hint">Free AI images. Sexual content and anything involving minors is refused.</p></div>
+<div id="ires"></div></section>
 <section id="search"><div class="card"><b data-i="s_t">Web search</b><input id="sq" placeholder="…">
 <button class="b" onclick="webSearch()" data-i="search">Search</button></div><div id="sres"></div></section>
 <section id="tools"><div class="grid" id="toolgrid"></div><div id="tres" class="card" style="display:none"></div></section>
@@ -40,18 +44,20 @@ input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px soli
 <label><input type="checkbox" id="picker" style="width:auto"> 🎚 Quality picker</label><br>
 <label><input type="checkbox" id="private" style="width:auto"> 🕶 Private mode</label>
 <label data-i="city">City</label><input id="city"><button class="b" onclick="saveSet()" data-i="save">Save</button></div>
+<div class="card"><label>🌗 Theme</label><select id="theme" onchange="applyTheme()"><option value="tg">Telegram</option><option value="light">Light</option><option value="dark">Dark</option></select>
+<label>🎨 Color</label><input type="color" id="accent" value="#2a8bf2" onchange="applyTheme()" style="height:44px"></div>
 <p class="hint" id="mode"></p></section>
 <script>
 const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
 const API = new URLSearchParams(location.search).get('api');
 const L = (tg.initDataUnsafe.user||{}).language_code||'en';
-const TABS=[['dl','📥'],['ai','🤖'],['search','🌍'],['tools','🛠'],['games','🎮'],['set','⚙️']];
+const TABS=[['dl','📥'],['ai','🤖'],['img','🎨'],['search','🌍'],['tools','🛠'],['games','🎮'],['set','⚙️']];
 const NAMES={en:{dl:'Download',ai:'AI',search:'Search',tools:'Tools',games:'Games',set:'Settings'},
 tr:{dl:'İndir',ai:'Yapay zekâ',search:'Ara',tools:'Araçlar',games:'Oyunlar',set:'Ayarlar'},
 ru:{dl:'Скачать',ai:'ИИ',search:'Поиск',tools:'Инструменты',games:'Игры',set:'Настройки'},
 tg:{dl:'Боргирӣ',ai:'ЗС',search:'Ҷустуҷӯ',tools:'Асбобҳо',games:'Бозиҳо',set:'Танзимот'},
 uz:{dl:'Yuklash',ai:'AI',search:'Qidiruv',tools:'Vositalar',games:"O'yinlar",set:'Sozlamalar'}};
-const N=NAMES[L]||NAMES.en;
+const N=Object.assign({img:'Image'},NAMES[L]||NAMES.en);
 const tabs=document.getElementById('tabs');
 TABS.forEach(([id,e],i)=>{const b=document.createElement('button');b.textContent=e+' '+N[id];b.onclick=()=>show(id);b.id='t_'+id;tabs.appendChild(b)});
 function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));
@@ -83,13 +89,13 @@ async function webSearch(){const q=document.getElementById('sq').value.trim();if
 const TOOLS=[['t_video','🎬 Video tools'],['t_note','⭕ Round video'],['t_audio','🎵 Audio FX'],['t_rembg','✂️ Remove BG'],
 ['t_qr','🔳 QR create'],['t_qrread','📷 QR read'],['t_img2pdf','🖼→📄 PDF'],['t_files','📄 Converter'],['t_link','🛡 Link check'],
 ['t_uid','🆔 ID & age'],['t_sticker','🧩 Sticker pack'],['ai_trfile','🌐 Translate file'],['p_remind','⏰ Reminder'],['p_note','📝 Note'],
-['p_expense','💸 Expense'],['p_report','📊 Report']];
+['p_expense','💸 Expense'],['p_report','📊 Report'],['ai_edit','🪄 AI photo edit'],['t_namepack','🔠 Name stickers'],['t_share','📤 Share by code'],['t_get','📥 Get by code'],['ai_research','🔬 Research'],['yt_login','🔐 YouTube account'],['s_profile','👤 Profile'],['s_favs','⭐ Favorites']];
 const INFO=[['rates','💱 Rates'],['crypto','🪙 Crypto/Gold'],['weather','🌤 Weather'],['news','📰 News']];
 const tg_=document.getElementById('toolgrid');
 INFO.forEach(([a,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=async()=>{
   const r=await call({a});const box=document.getElementById('tres');if(r.text){box.style.display='block';box.style.whiteSpace='pre-wrap';box.textContent=noLinks(r.text).replace(/<[^>]+>/g,'')}};tg_.appendChild(b)});
 TOOLS.forEach(([t,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=()=>{call({a:'tool',t});if(API)tg.close()};tg_.appendChild(b)});
-const GAMES=[['f_trivia','❓ Trivia'],['f_million','💰 Millionaire'],['f_hangman','🪢 Hangman'],['f_riddle','🧩 Riddle'],['f_dice','🎲 Dice'],['l_quiz','🧠 Quiz'],['l_word','📖 Word'],['f_score','🏆 Score']];
+const GAMES=[['f_trivia','❓ Trivia'],['f_million','💰 Millionaire'],['f_hangman','🪢 Hangman'],['f_riddle','🧩 Riddle'],['f_dice','🎲 Dice'],['l_quiz','🧠 Quiz'],['l_word','📖 Word'],['f_score','🏆 Score'],['f_surprise','🎁 Surprise'],['s_top','🏅 Leaderboard']];
 const gg=document.getElementById('gamegrid');
 GAMES.forEach(([g,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=()=>{call({a:'game',g});if(API)tg.close()};gg.appendChild(b)});
 async function loadSet(){if(!API)return;const r=await call({a:'get'});const s=r.settings||{};
@@ -102,4 +108,28 @@ async function saveSet(){const v=id=>document.getElementById(id);
    ['picker',v('picker').checked],['private',v('private').checked?10:0],['city',v('city').value]];
   if(API){for(const [k,val] of sets)await call({a:'set',k,v:val});tg.showAlert('✅')}
   else{tg.sendData(JSON.stringify({a:'set',k:'bulk',v:sets}))}}
+
+function applyTheme(){const t=document.getElementById('theme').value,a=document.getElementById('accent').value,r=document.documentElement.style;
+  localStorage.setItem('es_theme',t);localStorage.setItem('es_accent',a);
+  const P={light:['#ffffff','#111111','#f2f3f5','#888888'],dark:['#17212b','#f5f5f5','#232e3c','#8a99a8']}[t];
+  ['--bg','--tx','--card','--hint'].forEach((k,i)=>P?r.setProperty(k,P[i]):r.removeProperty(k));
+  r.setProperty('--btn',a);}
+(function(){const t=localStorage.getItem('es_theme'),a=localStorage.getItem('es_accent');
+  if(t)document.getElementById('theme').value=t;if(a)document.getElementById('accent').value=a;if(t||a)applyTheme()})();
+async function genImg(){const q=document.getElementById('iq').value.trim();if(!q)return;const box=document.getElementById('ires');
+  box.innerHTML='<div class="card">⏳</div>';const r=await call({a:'img',q});box.innerHTML='';
+  if(r.image){const im=document.createElement('img');im.src=r.image;im.style.width='100%';im.style.borderRadius='12px';box.appendChild(im)}
+  else box.textContent=r.sent?'📨':(r.error==='blocked'?'🚫':'⚠️ '+(r.error||''))}
+let rec=null,chunks=[];
+document.getElementById('vhint').textContent=API?'Hold a conversation by voice (tap to start / stop).':'Live voice needs live mode (tunnel). In chat mode just send a voice message to the bot.';
+async function toggleVoice(){if(!API){tg.showAlert('🎙 → chat');return}
+  const b=document.getElementById('vbtn');
+  if(rec&&rec.state==='recording'){rec.stop();b.textContent='⏳';return}
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st);chunks=[];
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});
+      const fr=new FileReader();fr.onload=async()=>{const r=await call({a:'voice',audio:fr.result});
+        if(r.you)addMsg(r.you,true);if(r.text)addMsg(r.text);if(r.audio)new Audio(r.audio).play();if(r.error)addMsg('⚠️ '+r.error);
+        b.textContent='🎙 Live voice chat'};fr.readAsDataURL(blob)};
+    rec.start();b.textContent='⏹ Stop'}catch(e){tg.showAlert('🎙 '+e.message)}}
 </script></body></html>
