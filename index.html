@@ -36,6 +36,7 @@ input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px soli
 <button class="b" onclick="webSearch()" data-i="search">Search</button></div><div id="sres"></div></section>
 <section id="tools"><div class="grid" id="toolgrid"></div><div id="tres" class="card" style="display:none"></div></section>
 <section id="games"><div class="grid" id="gamegrid"></div></section>
+<section id="admin"><div class="card" id="apanel">Owner only</div></section>
 <section id="set"><div class="card"><label data-i="lang">Language</label><select id="lang">
 <option value="">Auto</option><option>tr</option><option>en</option><option>ru</option><option>tg</option><option>uz</option><option>fa</option><option>de</option><option>ar</option></select>
 <label data-i="persona">AI personality</label><select id="persona"><option>friend</option><option>teacher</option><option>pro</option><option>funny</option><option>poet</option><option>coder</option><option>doctor</option></select>
@@ -59,7 +60,9 @@ tg:{dl:'Боргирӣ',ai:'ЗС',search:'Ҷустуҷӯ',tools:'Асбобҳо'
 uz:{dl:'Yuklash',ai:'AI',search:'Qidiruv',tools:'Vositalar',games:"O'yinlar",set:'Sozlamalar'}};
 const N=Object.assign({img:'Image'},NAMES[L]||NAMES.en);
 const tabs=document.getElementById('tabs');
-TABS.forEach(([id,e],i)=>{const b=document.createElement('button');b.textContent=e+' '+N[id];b.onclick=()=>show(id);b.id='t_'+id;tabs.appendChild(b)});
+TABS.forEach(([id,e],i)=>{const b=document.createElement('button');b.textContent=e+' '+(N[id]||id);b.onclick=()=>show(id);b.id='t_'+id;tabs.appendChild(b)});
+call({a:'admin'}).then(r=>{if(r&&!r.error){const b=document.createElement('button');b.textContent='👑 Admin';b.id='t_admin';b.onclick=()=>{show('admin');loadAdmin()};tabs.appendChild(b);loadAdmin=async()=>{const x=await call({a:'admin'});const el=document.getElementById('apanel');if(x.error){el.textContent='⛔';return}el.innerHTML='<b>👥 '+x.users+' · 24h '+x.active24+' · jobs '+x.jobs+'</b><pre>'+JSON.stringify(x.stats,null,2)+'</pre><div class="row"><button class="b" onclick="call({a:\'admin_cmd\',cmd:\'open\'}).then(loadAdmin)">Open</button><button class="b" onclick="call({a:\'admin_cmd\',cmd:\'allowlist\'}).then(loadAdmin)">Allowlist</button><button class="b" onclick="call({a:\'admin_cmd\',cmd:\'force_off\'}).then(loadAdmin)">Force-sub off</button></div>'}}).catch(()=>{});
+let loadAdmin=()=>{};
 function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));
 document.querySelectorAll('header button').forEach(b=>b.classList.toggle('on',b.id=='t_'+id))}
 show('dl');
