@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- esanali-build:2.3 · 2.3.2 -->
+<!-- esanali-build:2.3 · 2.3.3 -->
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Esanalibot</title>
@@ -124,7 +124,7 @@ function t(k){return D[k]||S.en[k]||k}
 function applyI18n(){document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));
   document.querySelectorAll('[data-p]').forEach(e=>e.placeholder=t(e.dataset.p));renderTabs()}
 async function loadLang(){D=Object.assign({},S.en,S[L]||{});applyI18n();
-  if(!S[L]&&API){const c=localStorage.getItem('es_i18n_'+L);if(c){Object.assign(D,JSON.parse(c));applyI18n();return}
+  if(!S[L]&&(API||RELAY)){const c=localStorage.getItem('es_i18n_'+L);if(c){Object.assign(D,JSON.parse(c));applyI18n();return}
     const r=await call({a:'i18n',lang:L,s:S.en});if(r.s){localStorage.setItem('es_i18n_'+L,JSON.stringify(r.s));Object.assign(D,r.s);applyI18n()}}}
 const TABS=[['dl','📥'],['ai','🤖'],['img','🎨'],['tools','🛠'],['pray','🕌'],['yt','▶️'],['fun','🎲'],['set','⚙️']];
 let isAdmin=false,cur='dl';
@@ -140,19 +140,61 @@ async function call(d,timeout){
   if(API){const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),timeout||180000);
     try{const r=await fetch(API.replace(/\/$/,'')+'/api',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json','X-Init-Data':tg.initData,'bypass-tunnel-reminder':'1','ngrok-skip-browser-warning':'1'},body:JSON.stringify(d)});
       clearTimeout(tm);if(r.status==401)return{error:'auth (open the app from the bot)'};if(r.status>=500&&r.status!=500)return{error:'HTTP '+r.status+' (tunnel)'};return await r.json()}catch(e){clearTimeout(tm);return{error:e.name=='AbortError'?'timeout':'offline: '+(DIAGERR||'network')}}}
+  if(RELAY)return relayCall(d,timeout);
   if(tg.sendData&&['dl','ai','web','img','set','rates','crypto','weather','news','game','tool'].includes(d.a)){try{tg.sendData(JSON.stringify(d));return{sent:true}}catch(e){}}
   return{error:'offline'}}
 async function probe(){
-  if(!APIS.length){DIAGERR=t('noapi');banner(DIAGERR,'#c0392b33');return}
   const errs=[];
-  for(const u of APIS){const host=u.replace(/^https?:\/\//,'').split('/')[0];const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),10000);
+  if(!APIS.length&&!HAS_RELAY){DIAGERR=t('noapi');banner(DIAGERR,'#c0392b33');return}
+  for(const u of APIS){const host=u.replace(/^https?:\/\//,'').split('/')[0];const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),5000);
     try{const r=await fetch(u.replace(/\/$/,'')+'/health',{cache:'no-store',signal:ctl.signal,headers:{'bypass-tunnel-reminder':'1','ngrok-skip-browser-warning':'1'}});clearTimeout(tm);
       if(!r.ok){errs.push(host+': HTTP '+r.status);continue}
       let j={};try{j=await r.json()}catch(e){errs.push(host+': not the bot (HTML/interstitial)');continue}
       if(j.app!='esanali'){errs.push(host+': wrong answer');continue}
       API=u;banner('','');$('mode').textContent=t('live')+' · '+host;return}
-    catch(e){clearTimeout(tm);errs.push(host+': '+(e.name=='AbortError'?'timeout 10s':'network error (blocked/DNS/tunnel down)'))}}
+    catch(e){clearTimeout(tm);errs.push(host+': '+(e.name=='AbortError'?'timeout 5s':'network error (blocked/DNS/tunnel down)'))}}
+  if(HAS_RELAY){banner('⏳ relay…','#f1c40f33');RELAY=true;const e=await relayProbe();
+    if(!e){banner('','');$('mode').textContent='🟢 Relay mode (ntfy)';return}RELAY=false;errs.push('relay: '+e)}
   DIAGERR=t('offline')+'\n'+errs.join('\n');banner(DIAGERR,'#c0392b33');$('banner').style.whiteSpace='pre-wrap'}
+
+// ---- v2.3.3 ntfy relay (no inbound connection to the phone needed) ----
+const RL={base:QS.get('relay'),rq:QS.get('rq'),rt:QS.get('rt'),k:QS.get('k'),u:QS.get('u')};
+const HAS_RELAY=!!(RL.base&&RL.rq&&RL.rt&&RL.k&&RL.u);let RELAY=false,ES=null;const PEND={};
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function sha256(m){const l=m.length,nb=((l+9+63)>>6)<<6,b=new Uint8Array(nb);b.set(m);b[l]=0x80;const bl=l*8;
+  b[nb-4]=bl>>>24;b[nb-3]=bl>>>16&255;b[nb-2]=bl>>>8&255;b[nb-1]=bl&255;b[nb-5]=(l/0x20000000)|0;
+  let h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];const w=new Uint32Array(64);
+  for(let o=0;o<nb;o+=64){for(let i=0;i<16;i++)w[i]=b[o+4*i]<<24|b[o+4*i+1]<<16|b[o+4*i+2]<<8|b[o+4*i+3];
+    for(let i=16;i<64;i++){const x=w[i-15],y=w[i-2];const s0=(x>>>7|x<<25)^(x>>>18|x<<14)^(x>>>3),s1=(y>>>17|y<<15)^(y>>>19|y<<13)^(y>>>10);w[i]=w[i-16]+s0+w[i-7]+s1|0}
+    let [a,bb,c,d,e,f,g,hh]=h;
+    for(let i=0;i<64;i++){const S1=(e>>>6|e<<26)^(e>>>11|e<<21)^(e>>>25|e<<7),ch=e&f^~e&g,t1=hh+S1+ch+K[i]+w[i]|0,S0=(a>>>2|a<<30)^(a>>>13|a<<19)^(a>>>22|a<<10),mj=a&bb^a&c^bb&c,t2=S0+mj|0;
+      hh=g;g=f;f=e;e=d+t1|0;d=c;c=bb;bb=a;a=t1+t2|0}
+    h=[h[0]+a|0,h[1]+bb|0,h[2]+c|0,h[3]+d|0,h[4]+e|0,h[5]+f|0,h[6]+g|0,h[7]+hh|0]}
+  const out=new Uint8Array(32);h.forEach((v,i)=>{out[4*i]=v>>>24;out[4*i+1]=v>>>16&255;out[4*i+2]=v>>>8&255;out[4*i+3]=v&255});return out}
+const enc=new TextEncoder(),dec=new TextDecoder();
+const hex2b=h=>new Uint8Array(h.match(/../g).map(x=>parseInt(x,16))),b2hex=b=>Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');
+function cat(...a){const n=a.reduce((s,x)=>s+x.length,0),o=new Uint8Array(n);let p=0;a.forEach(x=>{o.set(x,p);p+=x.length});return o}
+function hmac(k,m){const kb=new Uint8Array(64);kb.set(k.length>64?sha256(k):k);const ip=kb.map(x=>x^0x36),op=kb.map(x=>x^0x5c);return sha256(cat(op,sha256(cat(ip,m))))}
+function xs(k,n,data){const o=new Uint8Array(data.length);const kn=cat(k,n,new Uint8Array(4));const L=kn.length;
+  for(let i=0,blk=0;i<data.length;blk++){kn[L-4]=blk>>>24;kn[L-3]=blk>>>16&255;kn[L-2]=blk>>>8&255;kn[L-1]=blk&255;const ks=sha256(kn);for(let j=0;j<32&&i<data.length;j++,i++)o[i]=data[i]^ks[j]}return o}
+function b64e(u){let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+function b64d(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+function seal(obj,id){const k=hex2b(RL.k),n=crypto.getRandomValues(new Uint8Array(16)),c=b64e(xs(k,n,enc.encode(JSON.stringify(obj)))),nh=b2hex(n);
+  return {id,u:RL.u,n:nh,c,m:b2hex(hmac(k,enc.encode(nh+'|'+id+'|'+c)))}}
+function unseal(env){const k=hex2b(RL.k);if(b2hex(hmac(k,enc.encode(env.n+'|'+env.id+'|'+env.c)))!==env.m)throw new Error('mac');
+  return JSON.parse(dec.decode(xs(k,hex2b(env.n),b64d(env.c))))}
+async function relayEvent(ev){let body=ev.message;if(ev.attachment){body=await (await fetch(ev.attachment.url)).text()}
+  let env;try{env=JSON.parse(body)}catch(e){return}const p=PEND[env.id];if(!p)return;delete PEND[env.id];
+  try{p.res(unseal(env))}catch(e){p.res({error:'relay: bad reply'})}}
+function relayOpen(){if(ES)return;ES=new EventSource(RL.base+'/'+RL.rt+'/sse?since='+Math.floor(Date.now()/1000-5));
+  ES.onmessage=e=>{try{const ev=JSON.parse(e.data);if(ev.event=='message')relayEvent(ev)}catch(x){}}}
+async function relayCall(d,timeout){relayOpen();const id=b2hex(crypto.getRandomValues(new Uint8Array(8)));
+  const env=seal({d,i:tg.initData,t:Date.now()},id);const body=JSON.stringify(env);
+  const pr=new Promise(res=>{PEND[id]={res};setTimeout(()=>{if(PEND[id]){delete PEND[id];res({error:'relay timeout (bot offline?)'})}},timeout||180000)});
+  try{const r=await fetch(RL.base+'/'+RL.rq,body.length>3800?{method:'PUT',headers:{'Filename':'p.json'},body}:{method:'POST',body});
+    if(!r.ok){delete PEND[id];return{error:'relay HTTP '+r.status}}}catch(e){delete PEND[id];return{error:'relay unreachable: '+e.message}}
+  return pr}
+async function relayProbe(){const r=await relayCall({a:'get'},25000);return r&&!r.error?null:(r.error||'?')}
 // ---- download ----
 async function dlInfo(){const q=$('dlq').value.trim();if(!q)return;const box=$('dlres');box.innerHTML='<div class="card">⏳</div>';
   const r=await call({a:'dl_info',q});box.innerHTML='';
@@ -164,7 +206,7 @@ async function dlInfo(){const q=$('dlq').value.trim();if(!q)return;const box=$('
   const m=el('button','b b2',t('mp3'));m.onclick=()=>go({a:'dl_go',vid:r.vid,kind:'a'});g.append(m);
   const a=el('button','b b2',t('best'));a.onclick=()=>go({a:'dl_go',vid:r.vid,kind:r.generic?'media':'v'});g.append(a);c.append(g);box.append(c)}
 async function go(d){const r=await call(d);if(r.ok){tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('success');tg.showAlert('📥 ✓');loadQueue()}else tg.showAlert('⚠️ '+(r.error||''))}
-async function loadQueue(){if(!API)return;const r=await call({a:'queue'});const b=$('qbox');b.innerHTML='';
+async function loadQueue(){if(!API&&!RELAY)return;const r=await call({a:'queue'});const b=$('qbox');b.innerHTML='';
   (r.queue||[]).forEach((x,i)=>b.append(el('div',null,(i?'⏳ ':'⬇️ ')+x)));
   (r.history||[]).forEach(h=>b.append(el('div',null,(h.kind=='a'?'🎵 ':'🎬 ')+h.title)));if(!b.childNodes.length)b.textContent=t('empty')}
 $('dlq').addEventListener('keyup',e=>{if(e.key=='Enter')dlInfo()});
@@ -175,7 +217,7 @@ async function askAI(){const q=$('aiq').value.trim();if(!q)return;$('aiq').value
 async function webSearch(){const q=$('aiq').value.trim();if(!q)return;$('aiq').value='';addMsg('🌍 '+q,true);const r=await call({a:'web',q});
   if(r.text)addMsg(r.text+((r.sources||[]).length?'\n\n📚 '+r.sources.map(noLinks).join('\n📚 '):''));else addMsg(r.sent?t('sent'):'⚠️ '+(r.error||''))}
 function newChat(){$('chat').innerHTML='';call({a:'ai_new'})}
-async function recordToggle(btn,onDone){if(!API){tg.showAlert(t('offline'));return}
+async function recordToggle(btn,onDone){if(!API&&!RELAY){tg.showAlert(t('offline'));return}
   if(window._rec&&_rec.state=='recording'){_rec.stop();btn.textContent='⏳';return}
   try{const st=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(st);const ch=[];window._rec=rec;
     rec.ondataavailable=e=>ch.push(e.data);rec.onstop=()=>{st.getTracks().forEach(x=>x.stop());const fr=new FileReader();
@@ -198,7 +240,7 @@ function toggleSTT(){const b=$('sttbtn');recordToggle(b,async a=>{const r=await 
 [['rates','💱'],['crypto','🪙'],['weather','🌤'],['news','📰']].forEach(([a,e])=>{const b=el('button','b',e+' '+a);b.onclick=async()=>{$('ires2').textContent='⏳';
   const r=await call({a,q:a=='weather'?($('city').value||''):''});$('ires2').textContent=r.text?noLinks(r.text):(r.sent?t('sent'):'⚠️ '+(r.error||''))};$('infogrid').append(b)});
 let ACTS=[];
-async function loadActions(){if(!API)return;const r=await call({a:'actions'});ACTS=r.actions||[];renderTools();renderGames()}
+async function loadActions(){if(!API&&!RELAY)return;const r=await call({a:'actions'});ACTS=r.actions||[];renderTools();renderGames()}
 function renderTools(){const f=$('tfilter').value.toLowerCase();const g=$('toolgrid');g.innerHTML='';
   ACTS.filter(x=>x.cat!='fun'&&x.label.toLowerCase().includes(f)).forEach(x=>{const b=el('button','b b2',x.label);b.onclick=()=>openAct(x.id);g.append(b)})}
 function renderGames(){const g=$('gamegrid');g.innerHTML='';ACTS.filter(x=>x.cat=='fun').forEach(x=>{const b=el('button','b b2',x.label);b.onclick=()=>openAct(x.id);g.append(b)})}
@@ -221,7 +263,7 @@ function vidList(items,box){box.innerHTML='';const c=el('div','card');(items||[]
   d.onclick=()=>{if(it.pl)ytAcc('pl',it.pl);else if(it.ch)ytAcc('ch',it.ch);else{$('dlq').value=it.id;show('dl');dlInfo()}};c.append(d)});if(!(items||[]).length)c.textContent=t('empty');box.append(c)}
 async function ytSearch(){const q=$('ytq').value.trim();if(!q)return;$('ytres').innerHTML='<div class="card">⏳</div>';const r=await call({a:'yt',q});vidList(r.items,$('ytres'))}
 $('ytq').addEventListener('keyup',e=>{if(e.key=='Enter')ytSearch()});
-async function loadYtAcc(){if(!API)return;const b=$('ytacc');const r=await call({a:'yt_acc',w:'status'});b.innerHTML='';
+async function loadYtAcc(){if(!API&&!RELAY)return;const b=$('ytacc');const r=await call({a:'yt_acc',w:'status'});b.innerHTML='';
   if(r.error=='oauth_not_configured'){b.append(el('div','hint',t('nooauth')));return}
   if(!r.login){const x=el('button','b',t('login'));x.onclick=()=>openAct('yt_login');b.append(x);return}
   const g=el('div','grid');[['liked','liked'],['subs','subs'],['pls','pls']].forEach(([w,k])=>{const x=el('button','b b2',t(k));x.onclick=()=>ytAcc(w);g.append(x)});b.append(g)}
@@ -231,14 +273,14 @@ async function ytAcc(w,id){$('ytres').innerHTML='<div class="card">⏳</div>';co
   b.onclick=async()=>{const p=$('funres');p.style.display='block';p.textContent='⏳';const r=await call({a:'fun',k});p.textContent=r.text?noLinks(r.text):'⚠️ '+(r.error||'')};$('fungrid').append(b)});
 // ---- settings ----
 $('lang').append(new Option('🌐 '+t('auto')+' ('+TGL+')',''));LANGS.forEach(([c,n])=>$('lang').append(new Option(n,c)));
-async function loadSet(){if(!API)return;const r=await call({a:'get'});const s=r.settings||{};
+async function loadSet(){if(!API&&!RELAY)return;const r=await call({a:'get'});const s=r.settings||{};
   for(const k of ['persona','text_mode','city'])if(s[k]!=null)$(k).value=s[k];$('lang').value=s.lang||'';
   for(const k of ['voice_reply','picker'])$(k).checked=!!s[k];$('private').checked=!!s.private;if(s.city&&!$('pcity').value)$('pcity').value=s.city;
   const nl=s.lang||TGL;if(nl!=L){L=nl;loadLang()}}
 async function saveSet(){const sets=[['lang',$('lang').value||null],['persona',$('persona').value],['text_mode',$('text_mode').value],['voice_reply',$('voice_reply').checked],
   ['picker',$('picker').checked],['private',$('private').checked?10:0],['city',$('city').value]];
   L=$('lang').value||TGL;localStorage.setItem('es_lang',L);loadLang();
-  if(API){for(const [k,v] of sets)await call({a:'set',k,v});tg.showAlert(t('saved'))}else tg.sendData(JSON.stringify({a:'set',k:'bulk',v:sets}))}
+  if(API||RELAY){for(const [k,v] of sets)await call({a:'set',k,v});tg.showAlert(t('saved'))}else tg.sendData(JSON.stringify({a:'set',k:'bulk',v:sets}))}
 function applyTheme(){const th=$('theme').value,a=$('accent').value,r=document.documentElement.style;localStorage.setItem('es_theme',th);localStorage.setItem('es_accent',a);
   const P={light:['#ffffff','#111111','#f2f3f5','#888888'],dark:['#17212b','#f5f5f5','#232e3c','#8a99a8']}[th];
   ['--bg','--tx','--card','--hint'].forEach((k,i)=>P?r.setProperty(k,P[i]):r.removeProperty(k));r.setProperty('--btn',a)}
@@ -263,5 +305,5 @@ function admUpdate(){const f=$('pkg').files[0];if(!f)return;const fr=new FileRea
   const r=await call({a:'adm_update',file:fr.result,sha:$('pkgsha').value.trim()},900000);tg.showAlert(r.ok?'✅ restart':'⚠️ '+(r.error||'failed'))};fr.readAsDataURL(f)}
 // ---- boot ----
 (async()=>{applyI18n();show('dl');await probe();await loadLang();
-  if(API){const r=await call({a:'adm_info'});if(r&&!r.error){isAdmin=true;renderTabs()}loadSet();loadActions();loadQueue()}})();
+  if(API||RELAY){const r=await call({a:'adm_info'});if(r&&!r.error){isAdmin=true;renderTabs()}loadSet();loadActions();loadQueue()}})();
 </script></body></html>
