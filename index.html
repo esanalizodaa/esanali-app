@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- esanali-build:2.3 -->
+<!-- esanali-build:2.3 · 2.3.1 -->
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Esanalibot</title>
@@ -79,39 +79,39 @@ input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px soli
 const tg=window.Telegram.WebApp;tg.ready();tg.expand();
 const $=id=>document.getElementById(id);
 const QS=new URLSearchParams(location.search);
-let API=QS.get('api')||(/trycloudflare\.com$/.test(location.hostname)||location.pathname.startsWith('/app')?location.origin:null);
+let APIS=(QS.get('api')||'').split(',').map(x=>x.trim()).filter(x=>/^https?:\/\//.test(x));if(!APIS.length&&(/trycloudflare\.com$|lhr\.life$|pinggy\.|serveo|loca\.lt$/.test(location.hostname)||location.pathname.startsWith('/app')))APIS=[location.origin];let API=null,DIAGERR='';
 const TGL=((tg.initDataUnsafe.user||{}).language_code||'en').split('-')[0];
 let L=localStorage.getItem('es_lang')||TGL;
 const S={
-en:{dl:'Download',ai:'AI',img:'Image',tools:'Tools',pray:'Prayer',yt:'YouTube',fun:'Fun',set:'Settings',admin:'Admin',
+en:{noapi:'🔴 No server address in the app link: the bot is not updated to v2.3.1 or its tunnel failed. Owner: send /diag to the bot. Others: send /app.',dl:'Download',ai:'AI',img:'Image',tools:'Tools',pray:'Prayer',yt:'YouTube',fun:'Fun',set:'Settings',admin:'Admin',
 dl_t:'Download center',dl_h:'Paste a link (YouTube, Instagram, TikTok…) or type a name. Pick a quality – the file arrives in the chat.',dl_p:'Link or name…',find:'🔎 Find / qualities',queue:'📥 Queue & history',
 ask:'Ask anything…',send:'Send',web:'🌍 Web search',ai_h:'DeepSeek AI with memory. 🧹 = new chat, 🎙 = voice chat.',img_p:'Describe the image…',create:'🎨 Create',to_chat:'📨 To chat',
 translate:'Translate',bot_tools:'🛠 All bot tools',bot_tools_h:'Tools that need files open in the chat.',city:'City',show:'Show',compass:'🧭 Qibla compass',yt_p:'Search YouTube…',search:'Search',
 games:'🎮 Games',lang:'Language',persona:'AI personality',mode:'Text messages go to',voice_reply:'Voice replies',picker:'Quality picker',private:'Private mode (auto-delete)',save:'Save',
-live:'🟢 Live mode',offline:'🔴 Bot server not reachable. Results will be sent to the chat. Send /app to the bot for a fresh button.',sent:'📨 Sent to chat',login:'🔐 Log in to YouTube',
+live:'🟢 Live mode',offline:'🔴 Bot server not reachable. Results will be sent to the chat. Send /app (owner: /diag) to the bot.',sent:'📨 Sent to chat',login:'🔐 Log in to YouTube',
 liked:'👍 Liked',subs:'📺 Subscriptions',pls:'📂 Playlists',nooauth:'YouTube account login is not configured by the owner.',auto:'Auto (Telegram)',mp3:'🎵 MP3',best:'⚡ Best',empty:'Empty',saved:'✅ Saved'},
-tr:{dl:'İndir',ai:'Yapay zekâ',img:'Resim',tools:'Araçlar',pray:'Namaz',yt:'YouTube',fun:'Eğlence',set:'Ayarlar',admin:'Yönetici',
+tr:{noapi:"🔴 Uygulama bağlantısında sunucu adresi yok: bot v2.3.1'e güncellenmemiş ya da tünel kurulamadı. Sahip: bota /diag yazın. Diğerleri: /app yazın.",dl:'İndir',ai:'Yapay zekâ',img:'Resim',tools:'Araçlar',pray:'Namaz',yt:'YouTube',fun:'Eğlence',set:'Ayarlar',admin:'Yönetici',
 dl_t:'İndirme merkezi',dl_h:'Bağlantı yapıştırın (YouTube, Instagram, TikTok…) ya da ad yazın. Kaliteyi seçin – dosya sohbete gelir.',dl_p:'Bağlantı veya ad…',find:'🔎 Bul / kaliteler',queue:'📥 Sıra ve geçmiş',
 ask:'Bir şey sorun…',send:'Gönder',web:'🌍 Web araması',ai_h:'Hafızalı DeepSeek. 🧹 = yeni sohbet, 🎙 = sesli sohbet.',img_p:'Resmi tarif edin…',create:'🎨 Oluştur',to_chat:'📨 Sohbete',
 translate:'Çevir',bot_tools:'🛠 Tüm bot araçları',bot_tools_h:'Dosya gerektiren araçlar sohbette açılır.',city:'Şehir',show:'Göster',compass:'🧭 Kıble pusulası',yt_p:'YouTube\'da ara…',search:'Ara',
 games:'🎮 Oyunlar',lang:'Dil',persona:'Yapay zekâ kişiliği',mode:'Metin mesajları',voice_reply:'Sesli yanıt',picker:'Kalite seçici',private:'Gizli mod (otomatik sil)',save:'Kaydet',
-live:'🟢 Canlı mod',offline:'🔴 Bot sunucusuna ulaşılamıyor. Sonuçlar sohbete gönderilir. Yeni düğme için bota /app yazın.',sent:'📨 Sohbete gönderildi',login:'🔐 YouTube girişi',
+live:'🟢 Canlı mod',offline:'🔴 Bot sunucusuna ulaşılamıyor. Sonuçlar sohbete gönderilir. Bota /app yazın (sahip: /diag).',sent:'📨 Sohbete gönderildi',login:'🔐 YouTube girişi',
 liked:'👍 Beğenilenler',subs:'📺 Abonelikler',pls:'📂 Oynatma listeleri',nooauth:'YouTube hesabı girişi sahibi tarafından ayarlanmamış.',auto:'Otomatik (Telegram)',mp3:'🎵 MP3',best:'⚡ En iyi',empty:'Boş',saved:'✅ Kaydedildi'},
-ru:{dl:'Скачать',ai:'ИИ',img:'Картинка',tools:'Инструменты',pray:'Намаз',yt:'YouTube',fun:'Развлечения',set:'Настройки',admin:'Админ',
+ru:{noapi:'🔴 В ссылке приложения нет адреса сервера: бот не обновлён до v2.3.1 или туннель не поднялся. Владелец: /diag. Остальные: /app.',dl:'Скачать',ai:'ИИ',img:'Картинка',tools:'Инструменты',pray:'Намаз',yt:'YouTube',fun:'Развлечения',set:'Настройки',admin:'Админ',
 dl_t:'Центр загрузок',dl_h:'Вставьте ссылку (YouTube, Instagram, TikTok…) или название. Выберите качество – файл придёт в чат.',dl_p:'Ссылка или название…',find:'🔎 Найти / качество',queue:'📥 Очередь и история',
 ask:'Спросите что угодно…',send:'Отправить',web:'🌍 Поиск в сети',ai_h:'DeepSeek с памятью. 🧹 = новый чат, 🎙 = голос.',img_p:'Опишите картинку…',create:'🎨 Создать',to_chat:'📨 В чат',
 translate:'Перевести',bot_tools:'🛠 Все инструменты',bot_tools_h:'Инструменты с файлами открываются в чате.',city:'Город',show:'Показать',compass:'🧭 Компас киблы',yt_p:'Поиск на YouTube…',search:'Искать',
 games:'🎮 Игры',lang:'Язык',persona:'Характер ИИ',mode:'Текстовые сообщения',voice_reply:'Голосовые ответы',picker:'Выбор качества',private:'Приватный режим',save:'Сохранить',
 live:'🟢 Онлайн',offline:'🔴 Сервер бота недоступен. Результаты придут в чат. Отправьте боту /app.',sent:'📨 Отправлено в чат',login:'🔐 Войти в YouTube',
 liked:'👍 Понравившиеся',subs:'📺 Подписки',pls:'📂 Плейлисты',nooauth:'Вход в YouTube не настроен владельцем.',auto:'Авто (Telegram)',mp3:'🎵 MP3',best:'⚡ Лучшее',empty:'Пусто',saved:'✅ Сохранено'},
-tg:{dl:'Боргирӣ',ai:'ЗС',img:'Расм',tools:'Асбобҳо',pray:'Намоз',yt:'YouTube',fun:'Фароғат',set:'Танзимот',admin:'Админ',
+tg:{noapi:'🔴 Дар пайванди барнома суроғаи сервер нест: бот нав нашудааст ё туннел кор накард. Соҳиб: /diag. Дигарон: /app.',dl:'Боргирӣ',ai:'ЗС',img:'Расм',tools:'Асбобҳо',pray:'Намоз',yt:'YouTube',fun:'Фароғат',set:'Танзимот',admin:'Админ',
 dl_t:'Маркази боргирӣ',dl_h:'Пайванд гузоред ё ном нависед. Сифатро интихоб кунед – файл ба чат меояд.',dl_p:'Пайванд ё ном…',find:'🔎 Ёфтан / сифат',queue:'📥 Навбат ва таърих',
 ask:'Савол диҳед…',send:'Фиристодан',web:'🌍 Ҷустуҷӯ дар веб',ai_h:'DeepSeek бо хотира. 🧹 = чати нав, 🎙 = овоз.',img_p:'Расмро тасвир кунед…',create:'🎨 Сохтан',to_chat:'📨 Ба чат',
 translate:'Тарҷума',bot_tools:'🛠 Ҳамаи асбобҳо',bot_tools_h:'Асбобҳои файлдор дар чат кушода мешаванд.',city:'Шаҳр',show:'Нишон додан',compass:'🧭 Қутбнамои қибла',yt_p:'Ҷустуҷӯ дар YouTube…',search:'Ҷустуҷӯ',
 games:'🎮 Бозиҳо',lang:'Забон',persona:'Хислати ЗС',mode:'Паёмҳои матнӣ',voice_reply:'Ҷавоби овозӣ',picker:'Интихоби сифат',private:'Ҳолати махфӣ',save:'Нигоҳ доштан',
 live:'🟢 Зинда',offline:'🔴 Сервери бот дастрас нест. Натиҷаҳо ба чат меоянд. Ба бот /app фиристед.',sent:'📨 Ба чат фиристода шуд',login:'🔐 Ворид ба YouTube',
 liked:'👍 Писандида',subs:'📺 Обунаҳо',pls:'📂 Рӯйхатҳо',nooauth:'Вуруд ба YouTube танзим нашудааст.',auto:'Худкор (Telegram)',mp3:'🎵 MP3',best:'⚡ Беҳтарин',empty:'Холӣ',saved:'✅ Нигоҳ дошта шуд'},
-uz:{dl:'Yuklash',ai:'AI',img:'Rasm',tools:'Vositalar',pray:'Namoz',yt:'YouTube',fun:'Ko\'ngilochar',set:'Sozlamalar',admin:'Admin',
+uz:{noapi:"🔴 Ilova havolasida server manzili yo'q: bot yangilanmagan yoki tunnel ishlamadi. Egasi: /diag. Boshqalar: /app.",dl:'Yuklash',ai:'AI',img:'Rasm',tools:'Vositalar',pray:'Namoz',yt:'YouTube',fun:'Ko\'ngilochar',set:'Sozlamalar',admin:'Admin',
 dl_t:'Yuklab olish markazi',dl_h:'Havolani qo\'ying yoki nom yozing. Sifatni tanlang – fayl chatga keladi.',dl_p:'Havola yoki nom…',find:'🔎 Topish / sifat',queue:'📥 Navbat va tarix',
 ask:'Savol bering…',send:'Yuborish',web:'🌍 Internetda qidirish',ai_h:'Xotirali DeepSeek. 🧹 = yangi chat, 🎙 = ovoz.',img_p:'Rasmni tasvirlang…',create:'🎨 Yaratish',to_chat:'📨 Chatga',
 translate:'Tarjima',bot_tools:'🛠 Barcha vositalar',bot_tools_h:'Fayl talab qiladigan vositalar chatda ochiladi.',city:'Shahar',show:'Ko\'rsatish',compass:'🧭 Qibla kompasi',yt_p:'YouTube\'da qidirish…',search:'Qidirish',
@@ -137,13 +137,21 @@ function noLinks(s){return String(s||'').replace(/\b(?:https?:\/\/|www\.)\S+/gi,
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
 async function call(d,timeout){
   if(API){const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),timeout||180000);
-    try{const r=await fetch(API.replace(/\/$/,'')+'/api',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json','X-Init-Data':tg.initData},body:JSON.stringify(d)});
-      clearTimeout(tm);if(r.status==401)return{error:'auth (open the app from the bot)'};return await r.json()}catch(e){clearTimeout(tm);return{error:'offline'}}}
+    try{const r=await fetch(API.replace(/\/$/,'')+'/api',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json','X-Init-Data':tg.initData,'bypass-tunnel-reminder':'1','ngrok-skip-browser-warning':'1'},body:JSON.stringify(d)});
+      clearTimeout(tm);if(r.status==401)return{error:'auth (open the app from the bot)'};if(r.status>=500&&r.status!=500)return{error:'HTTP '+r.status+' (tunnel)'};return await r.json()}catch(e){clearTimeout(tm);return{error:e.name=='AbortError'?'timeout':'offline: '+(DIAGERR||'network')}}}
   if(tg.sendData&&['dl','ai','web','img','set','rates','crypto','weather','news','game','tool'].includes(d.a)){try{tg.sendData(JSON.stringify(d));return{sent:true}}catch(e){}}
   return{error:'offline'}}
-async function probe(){if(!API){banner(t('offline'),'#c0392b33');return}
-  try{const r=await fetch(API.replace(/\/$/,'')+'/health',{cache:'no-store'});const j=await r.json();if(j.app!='esanali')throw 0;banner('','');$('mode').textContent=t('live')}
-  catch(e){banner(t('offline'),'#c0392b33');API=null}}
+async function probe(){
+  if(!APIS.length){DIAGERR=t('noapi');banner(DIAGERR,'#c0392b33');return}
+  const errs=[];
+  for(const u of APIS){const host=u.replace(/^https?:\/\//,'').split('/')[0];const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),10000);
+    try{const r=await fetch(u.replace(/\/$/,'')+'/health',{cache:'no-store',signal:ctl.signal,headers:{'bypass-tunnel-reminder':'1','ngrok-skip-browser-warning':'1'}});clearTimeout(tm);
+      if(!r.ok){errs.push(host+': HTTP '+r.status);continue}
+      let j={};try{j=await r.json()}catch(e){errs.push(host+': not the bot (HTML/interstitial)');continue}
+      if(j.app!='esanali'){errs.push(host+': wrong answer');continue}
+      API=u;banner('','');$('mode').textContent=t('live')+' · '+host;return}
+    catch(e){clearTimeout(tm);errs.push(host+': '+(e.name=='AbortError'?'timeout 10s':'network error (blocked/DNS/tunnel down)'))}}
+  DIAGERR=t('offline')+'\n'+errs.join('\n');banner(DIAGERR,'#c0392b33');$('banner').style.whiteSpace='pre-wrap'}
 // ---- download ----
 async function dlInfo(){const q=$('dlq').value.trim();if(!q)return;const box=$('dlres');box.innerHTML='<div class="card">⏳</div>';
   const r=await call({a:'dl_info',q});box.innerHTML='';
@@ -238,7 +246,7 @@ function applyTheme(){const th=$('theme').value,a=$('accent').value,r=document.d
 async function loadAdmin(){const x=await call({a:'adm_info'});const p=$('apanel');if(x.error){p.textContent='⛔ '+x.error;return}
   p.innerHTML='';p.append(el('b',null,'v'+x.version+' · 👥 '+x.users+' · 24h '+x.active24+' · jobs '+x.jobs),
    el('div','hint','⏱ '+Math.round(x.uptime/60)+' min · '+(x.tunnel?'🟢 tunnel':'🔴 no tunnel')+' · '+x.frontend+' · access '+x.access+' · force-sub '+(x.force_sub||'-')),
-   el('pre','pre',JSON.stringify(x.stats,null,1)),el('div','hint','backups: '+(x.backups||[]).join(', '))) }
+   el('pre','pre',JSON.stringify(x.stats,null,1)),el('div','hint','backups: '+(x.backups||[]).join(', ')));const dg=await call({a:'diag'});if(dg.text)p.append(el('pre','pre',dg.text))}
 async function admCmd(a){if(!confirm(a+'?'))return;const r=await call({a});tg.showAlert(r.ok?'✅ '+(r.text||''):'⚠️ '+(r.error||''))}
 function admUpdate(){const f=$('pkg').files[0];if(!f)return;const fr=new FileReader();fr.onload=async()=>{tg.showAlert('⬆️ …');
   const r=await call({a:'adm_update',file:fr.result,sha:$('pkgsha').value.trim()},900000);tg.showAlert(r.ok?'✅ restart':'⚠️ '+(r.error||'failed'))};fr.readAsDataURL(f)}
