@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<!-- esanali-build:2.3 -->
+<html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Esanalibot</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -7,132 +8,241 @@
 :root{--bg:var(--tg-theme-bg-color,#fff);--tx:var(--tg-theme-text-color,#111);--hint:var(--tg-theme-hint-color,#888);
 --btn:var(--tg-theme-button-color,#2a8bf2);--btx:var(--tg-theme-button-text-color,#fff);--card:var(--tg-theme-secondary-bg-color,#f2f3f5)}
 *{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--tx)}
-header{display:flex;gap:6px;overflow-x:auto;padding:8px;position:sticky;top:0;background:var(--bg);z-index:2}
-header button{flex:0 0 auto;border:0;border-radius:18px;padding:8px 12px;background:var(--card);color:var(--tx)}
+header{display:flex;gap:6px;overflow-x:auto;padding:8px;position:sticky;top:0;background:var(--bg);z-index:2;scrollbar-width:none}
+header button{flex:0 0 auto;border:0;border-radius:18px;padding:8px 12px;background:var(--card);color:var(--tx);font:inherit}
 header button.on{background:var(--btn);color:var(--btx)}
 section{display:none;padding:10px}section.on{display:block}
 .card{background:var(--card);border-radius:12px;padding:12px;margin:8px 0}
-input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--hint);background:var(--bg);color:var(--tx);font:inherit}
+input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--hint);background:var(--bg);color:var(--tx);font:inherit;margin-top:4px}
 .row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
-.b{border:0;border-radius:10px;padding:10px;background:var(--btn);color:var(--btx);font:inherit;width:100%;margin-top:8px}
+.b{border:0;border-radius:10px;padding:10px;background:var(--btn);color:var(--btx);font:inherit;width:100%;margin-top:8px;cursor:pointer}
+.b2{background:var(--card);color:var(--tx);border:1px solid var(--hint)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid .b{margin:0}
 .msg{white-space:pre-wrap;margin:6px 0;padding:8px 10px;border-radius:10px;max-width:92%}
 .me{background:var(--btn);color:var(--btx);margin-left:auto}.bot{background:var(--card)}
-.hint{color:var(--hint);font-size:13px}.item{padding:8px;border-bottom:1px solid var(--card);cursor:pointer}
+.hint{color:var(--hint);font-size:13px}.item{padding:9px;border-bottom:1px solid var(--hint);cursor:pointer}
+#banner{padding:8px 10px;font-size:13px;display:none}#banner.on{display:block}
+.pre{white-space:pre-wrap}#compass{width:180px;height:180px;margin:10px auto;border-radius:50%;border:3px solid var(--hint);position:relative}
+#needle{position:absolute;left:50%;top:10px;width:4px;height:80px;margin-left:-2px;background:#1a9e4a;transform-origin:50% 80px;border-radius:2px}
+#needle:after{content:'🕋';position:absolute;top:-24px;left:-10px}
 </style></head><body>
+<div id="banner"></div>
 <header id="tabs"></header>
-<section id="dl"><div class="card"><b data-i="dl_t">Download center</b>
-<p class="hint" data-i="dl_h">Paste a post link or type a song / video name. The file arrives in the chat (quality picker there).</p>
-<input id="dlq" placeholder="…"><div class="row"><button class="b" onclick="dl('pick')" data-i="find">Find / choose quality</button></div>
-<div class="row"><button class="b" onclick="dl('a')">🎵 MP3</button><button class="b" onclick="dl('v')">🎬 Video</button></div></div>
-<div id="ytres"></div></section>
-<section id="ai"><div id="chat"></div><textarea id="aiq" rows="2" placeholder="…"></textarea>
-<div class="row"><button class="b" onclick="askAI()" data-i="send">Send</button><button class="b" onclick="newChat()">🧹 /new</button></div>
-<button class="b" id="vbtn" onclick="toggleVoice()">🎙 Live voice chat</button><p class="hint" id="vhint"></p></section>
-<section id="img"><div class="card"><b>🎨 Image</b><textarea id="iq" rows="2" placeholder="…"></textarea>
-<button class="b" onclick="genImg()">🎨 Create</button><p class="hint">Free AI images. Sexual content and anything involving minors is refused.</p></div>
-<div id="ires"></div></section>
-<section id="search"><div class="card"><b data-i="s_t">Web search</b><input id="sq" placeholder="…">
-<button class="b" onclick="webSearch()" data-i="search">Search</button></div><div id="sres"></div></section>
-<section id="tools"><div class="grid" id="toolgrid"></div><div id="tres" class="card" style="display:none"></div></section>
-<section id="games"><div class="grid" id="gamegrid"></div></section>
-<section id="admin"><div class="card" id="apanel">Owner only</div></section>
-<section id="set"><div class="card"><label data-i="lang">Language</label><select id="lang">
-<option value="">Auto</option><option>tr</option><option>en</option><option>ru</option><option>tg</option><option>uz</option><option>fa</option><option>de</option><option>ar</option></select>
-<label data-i="persona">AI personality</label><select id="persona"><option>friend</option><option>teacher</option><option>pro</option><option>funny</option><option>poet</option><option>coder</option><option>doctor</option></select>
-<label data-i="mode">Text mode</label><select id="text_mode"><option value="search">🔎 YouTube search</option><option value="ai">🤖 AI chat</option></select>
-<label><input type="checkbox" id="voice_reply" style="width:auto"> 🔊 Voice replies</label><br>
-<label><input type="checkbox" id="picker" style="width:auto"> 🎚 Quality picker</label><br>
-<label><input type="checkbox" id="private" style="width:auto"> 🕶 Private mode</label>
-<label data-i="city">City</label><input id="city"><button class="b" onclick="saveSet()" data-i="save">Save</button></div>
-<div class="card"><label>🌗 Theme</label><select id="theme" onchange="applyTheme()"><option value="tg">Telegram</option><option value="light">Light</option><option value="dark">Dark</option></select>
-<label>🎨 Color</label><input type="color" id="accent" value="#2a8bf2" onchange="applyTheme()" style="height:44px"></div>
-<p class="hint" id="mode"></p></section>
-<script>
-const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
-const API = new URLSearchParams(location.search).get('api');
-const L = (tg.initDataUnsafe.user||{}).language_code||'en';
-const TABS=[['dl','📥'],['ai','🤖'],['img','🎨'],['search','🌍'],['tools','🛠'],['games','🎮'],['set','⚙️']];
-const NAMES={en:{dl:'Download',ai:'AI',search:'Search',tools:'Tools',games:'Games',set:'Settings'},
-tr:{dl:'İndir',ai:'Yapay zekâ',search:'Ara',tools:'Araçlar',games:'Oyunlar',set:'Ayarlar'},
-ru:{dl:'Скачать',ai:'ИИ',search:'Поиск',tools:'Инструменты',games:'Игры',set:'Настройки'},
-tg:{dl:'Боргирӣ',ai:'ЗС',search:'Ҷустуҷӯ',tools:'Асбобҳо',games:'Бозиҳо',set:'Танзимот'},
-uz:{dl:'Yuklash',ai:'AI',search:'Qidiruv',tools:'Vositalar',games:"O'yinlar",set:'Sozlamalar'}};
-const N=Object.assign({img:'Image'},NAMES[L]||NAMES.en);
-const tabs=document.getElementById('tabs');
-TABS.forEach(([id,e],i)=>{const b=document.createElement('button');b.textContent=e+' '+(N[id]||id);b.onclick=()=>show(id);b.id='t_'+id;tabs.appendChild(b)});
-call({a:'admin'}).then(r=>{if(r&&!r.error){const b=document.createElement('button');b.textContent='👑 Admin';b.id='t_admin';b.onclick=()=>{show('admin');loadAdmin()};tabs.appendChild(b);loadAdmin=async()=>{const x=await call({a:'admin'});const el=document.getElementById('apanel');if(x.error){el.textContent='⛔';return}el.innerHTML='<b>👥 '+x.users+' · 24h '+x.active24+' · jobs '+x.jobs+'</b><pre>'+JSON.stringify(x.stats,null,2)+'</pre><div class="row"><button class="b" onclick="call({a:\'admin_cmd\',cmd:\'open\'}).then(loadAdmin)">Open</button><button class="b" onclick="call({a:\'admin_cmd\',cmd:\'allowlist\'}).then(loadAdmin)">Allowlist</button><button class="b" onclick="call({a:\'admin_cmd\',cmd:\'force_off\'}).then(loadAdmin)">Force-sub off</button></div>'}}).catch(()=>{});
-let loadAdmin=()=>{};
-function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));
-document.querySelectorAll('header button').forEach(b=>b.classList.toggle('on',b.id=='t_'+id))}
-show('dl');
-document.getElementById('mode').textContent = API ? '🟢 Live mode (results inside the app)' : '🟡 Chat mode: results are sent to the chat with the bot';
-function noLinks(t){return String(t||'').replace(/\b(?:https?:\/\/|www\.)\S+/gi,'')}
-async function call(d){
-  if(API){try{const r=await fetch(API.replace(/\/$/,'')+'/api',{method:'POST',headers:{'Content-Type':'application/json','X-Init-Data':tg.initData},body:JSON.stringify(d)});
-    return await r.json()}catch(e){return {error:'offline'}}}
-  if(!tg.sendData){return {error:'no sendData'}}
-  tg.sendData(JSON.stringify(d)); return {sent:true};   // closes the app; the bot answers in the chat
-}
-function dl(kind){const q=document.getElementById('dlq').value.trim();if(!q)return;
-  call({a:'dl',q,kind}).then(r=>{tg.showAlert?tg.showAlert('📥 ✓'):0})}
-async function ytSearch(q){const r=await call({a:'yt',q});const box=document.getElementById('ytres');box.innerHTML='';
-  (r.items||[]).forEach(it=>{const d=document.createElement('div');d.className='item';d.textContent='🎬 '+it.title+' ('+it.dur+')';
-  d.onclick=()=>call({a:'dl',q:it.id,kind:'pick'}).then(()=>tg.showAlert('📥 ✓'));box.appendChild(d)})}
-document.getElementById('dlq').addEventListener('keyup',e=>{if(e.key=='Enter'&&API){const q=e.target.value.trim();if(q&&!/^https?:|www\./i.test(q))ytSearch(q)}});
-function addMsg(t,me){const d=document.createElement('div');d.className='msg '+(me?'me':'bot');d.textContent=noLinks(t).replace(/<[^>]+>/g,'');document.getElementById('chat').appendChild(d);d.scrollIntoView()}
-async function askAI(){const el=document.getElementById('aiq');const q=el.value.trim();if(!q)return;el.value='';addMsg(q,true);
-  const r=await call({a:'ai',q});if(r.text)addMsg(r.text);else if(r.error)addMsg('⚠️ '+r.error)}
-function newChat(){document.getElementById('chat').innerHTML='';call({a:'tool',t:'ai_new'})}
-async function webSearch(){const q=document.getElementById('sq').value.trim();if(!q)return;const box=document.getElementById('sres');
-  box.innerHTML='<div class="card">⏳</div>';const r=await call({a:'web',q});
-  box.innerHTML='';const c=document.createElement('div');c.className='card';c.style.whiteSpace='pre-wrap';
-  c.textContent=r.text?noLinks(r.text).replace(/<[^>]+>/g,''):(r.sent?'📨':'⚠️ '+(r.error||''));box.appendChild(c);
-  (r.sources||[]).forEach(s=>{const d=document.createElement('div');d.className='hint';d.textContent='📚 '+noLinks(s);box.appendChild(d)})}
-const TOOLS=[['t_video','🎬 Video tools'],['t_note','⭕ Round video'],['t_audio','🎵 Audio FX'],['t_rembg','✂️ Remove BG'],
-['t_qr','🔳 QR create'],['t_qrread','📷 QR read'],['t_img2pdf','🖼→📄 PDF'],['t_files','📄 Converter'],['t_link','🛡 Link check'],
-['t_uid','🆔 ID & age'],['t_sticker','🧩 Sticker pack'],['ai_trfile','🌐 Translate file'],['p_remind','⏰ Reminder'],['p_note','📝 Note'],
-['p_expense','💸 Expense'],['p_report','📊 Report'],['ai_edit','🪄 AI photo edit'],['t_namepack','🔠 Name stickers'],['t_share','📤 Share by code'],['t_get','📥 Get by code'],['ai_research','🔬 Research'],['yt_login','🔐 YouTube account'],['s_profile','👤 Profile'],['s_favs','⭐ Favorites']];
-const INFO=[['rates','💱 Rates'],['crypto','🪙 Crypto/Gold'],['weather','🌤 Weather'],['news','📰 News']];
-const tg_=document.getElementById('toolgrid');
-INFO.forEach(([a,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=async()=>{
-  const r=await call({a});const box=document.getElementById('tres');if(r.text){box.style.display='block';box.style.whiteSpace='pre-wrap';box.textContent=noLinks(r.text).replace(/<[^>]+>/g,'')}};tg_.appendChild(b)});
-TOOLS.forEach(([t,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=()=>{call({a:'tool',t});if(API)tg.close()};tg_.appendChild(b)});
-const GAMES=[['f_trivia','❓ Trivia'],['f_million','💰 Millionaire'],['f_hangman','🪢 Hangman'],['f_riddle','🧩 Riddle'],['f_dice','🎲 Dice'],['l_quiz','🧠 Quiz'],['l_word','📖 Word'],['f_score','🏆 Score'],['f_surprise','🎁 Surprise'],['s_top','🏅 Leaderboard']];
-const gg=document.getElementById('gamegrid');
-GAMES.forEach(([g,l])=>{const b=document.createElement('button');b.className='b';b.textContent=l;b.onclick=()=>{call({a:'game',g});if(API)tg.close()};gg.appendChild(b)});
-async function loadSet(){if(!API)return;const r=await call({a:'get'});const s=r.settings||{};
-  for(const k of ['persona','text_mode','city'])if(s[k]!=null)document.getElementById(k).value=s[k];
-  document.getElementById('lang').value=s.lang||'';for(const k of ['voice_reply','picker'])document.getElementById(k).checked=!!s[k];
-  document.getElementById('private').checked=!!s.private}
-loadSet();
-async function saveSet(){const v=id=>document.getElementById(id);
-  const sets=[['lang',v('lang').value||null],['persona',v('persona').value],['text_mode',v('text_mode').value],['voice_reply',v('voice_reply').checked],
-   ['picker',v('picker').checked],['private',v('private').checked?10:0],['city',v('city').value]];
-  if(API){for(const [k,val] of sets)await call({a:'set',k,v:val});tg.showAlert('✅')}
-  else{tg.sendData(JSON.stringify({a:'set',k:'bulk',v:sets}))}}
 
-function applyTheme(){const t=document.getElementById('theme').value,a=document.getElementById('accent').value,r=document.documentElement.style;
-  localStorage.setItem('es_theme',t);localStorage.setItem('es_accent',a);
-  const P={light:['#ffffff','#111111','#f2f3f5','#888888'],dark:['#17212b','#f5f5f5','#232e3c','#8a99a8']}[t];
-  ['--bg','--tx','--card','--hint'].forEach((k,i)=>P?r.setProperty(k,P[i]):r.removeProperty(k));
-  r.setProperty('--btn',a);}
-(function(){const t=localStorage.getItem('es_theme'),a=localStorage.getItem('es_accent');
-  if(t)document.getElementById('theme').value=t;if(a)document.getElementById('accent').value=a;if(t||a)applyTheme()})();
-async function genImg(){const q=document.getElementById('iq').value.trim();if(!q)return;const box=document.getElementById('ires');
-  box.innerHTML='<div class="card">⏳</div>';const r=await call({a:'img',q});box.innerHTML='';
-  if(r.image){const im=document.createElement('img');im.src=r.image;im.style.width='100%';im.style.borderRadius='12px';box.appendChild(im)}
-  else box.textContent=r.sent?'📨':(r.error==='blocked'?'🚫':'⚠️ '+(r.error||''))}
-let rec=null,chunks=[];
-document.getElementById('vhint').textContent=API?'Hold a conversation by voice (tap to start / stop).':'Live voice needs live mode (tunnel). In chat mode just send a voice message to the bot.';
-async function toggleVoice(){if(!API){tg.showAlert('🎙 → chat');return}
-  const b=document.getElementById('vbtn');
-  if(rec&&rec.state==='recording'){rec.stop();b.textContent='⏳';return}
-  try{const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st);chunks=[];
-    rec.ondataavailable=e=>chunks.push(e.data);
-    rec.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});
-      const fr=new FileReader();fr.onload=async()=>{const r=await call({a:'voice',audio:fr.result});
-        if(r.you)addMsg(r.you,true);if(r.text)addMsg(r.text);if(r.audio)new Audio(r.audio).play();if(r.error)addMsg('⚠️ '+r.error);
-        b.textContent='🎙 Live voice chat'};fr.readAsDataURL(blob)};
-    rec.start();b.textContent='⏹ Stop'}catch(e){tg.showAlert('🎙 '+e.message)}}
+<section id="dl"><div class="card"><b data-i="dl_t"></b><p class="hint" data-i="dl_h"></p>
+<input id="dlq" data-p="dl_p"><button class="b" onclick="dlInfo()" data-i="find"></button></div>
+<div id="dlres"></div>
+<div class="card"><b data-i="queue"></b> <button class="b b2" onclick="loadQueue()" style="width:auto;padding:4px 10px">↻</button><div id="qbox" class="hint"></div></div></section>
+
+<section id="ai"><div id="chat"></div><textarea id="aiq" rows="2" data-p="ask"></textarea>
+<div class="row"><button class="b" onclick="askAI()" data-i="send"></button><button class="b b2" onclick="newChat()">🧹</button><button class="b b2" id="vbtn" onclick="toggleVoice()">🎙</button></div>
+<div class="row"><button class="b b2" onclick="webSearch()" data-i="web"></button></div><p class="hint" data-i="ai_h"></p></section>
+
+<section id="img"><div class="card"><textarea id="iq" rows="3" data-p="img_p"></textarea>
+<select id="isz"><option value="768x768">1:1</option><option value="768x1344">9:16</option><option value="1344x768">16:9</option></select>
+<div class="row"><button class="b" onclick="genImg(false)" data-i="create"></button><button class="b b2" onclick="genImg(true)" data-i="to_chat"></button></div></div><div id="ires"></div></section>
+
+<section id="tools">
+<div class="card"><b>🌐 <span data-i="translate"></span></b><textarea id="trq" rows="3"></textarea>
+<select id="trl"></select><button class="b" onclick="doTr()" data-i="translate"></button><div id="trres" class="pre"></div>
+<div class="row"><button class="b b2" onclick="doTTS()">🔊 TTS</button><button class="b b2" id="sttbtn" onclick="toggleSTT()">🎤 STT</button></div><audio id="ttsa" controls style="width:100%;display:none;margin-top:8px"></audio></div>
+<div class="card"><b>ℹ️</b><div class="grid" id="infogrid"></div><div id="ires2" class="pre" style="margin-top:8px"></div></div>
+<div class="card"><b data-i="bot_tools"></b><p class="hint" data-i="bot_tools_h"></p><input id="tfilter" placeholder="🔎" oninput="renderTools()"><div class="grid" id="toolgrid" style="margin-top:8px"></div></div></section>
+
+<section id="pray"><div class="card"><input id="pcity" data-p="city"><div class="row"><button class="b" onclick="loadPrayer()" data-i="show"></button><button class="b b2" onclick="geoPrayer()">📍</button></div></div>
+<div id="pres" class="card pre" style="display:none"></div><div class="card" style="text-align:center"><div id="compass"><div id="needle"></div></div>
+<button class="b b2" onclick="startCompass()" data-i="compass"></button><p class="hint" id="qhint"></p></div></section>
+
+<section id="yt"><div class="card"><input id="ytq" data-p="yt_p"><button class="b" onclick="ytSearch()" data-i="search"></button></div>
+<div class="card" id="ytacc"></div><div id="ytres"></div></section>
+
+<section id="fun"><div class="grid" id="fungrid"></div><div id="funres" class="card pre" style="display:none"></div>
+<div class="card"><b data-i="games"></b><div class="grid" id="gamegrid" style="margin-top:8px"></div></div></section>
+
+<section id="set"><div class="card"><label data-i="lang"></label><select id="lang"></select>
+<label data-i="persona"></label><select id="persona"><option>friend</option><option>teacher</option><option>pro</option><option>funny</option><option>poet</option><option>coder</option><option>doctor</option></select>
+<label data-i="mode"></label><select id="text_mode"><option value="search">🔎 YouTube</option><option value="ai">🤖 AI</option></select>
+<label><input type="checkbox" id="voice_reply" style="width:auto"> 🔊 <span data-i="voice_reply"></span></label><br>
+<label><input type="checkbox" id="picker" style="width:auto"> 🎚 <span data-i="picker"></span></label><br>
+<label><input type="checkbox" id="private" style="width:auto"> 🕶 <span data-i="private"></span></label>
+<label data-i="city"></label><input id="city"><button class="b" onclick="saveSet()" data-i="save"></button></div>
+<div class="card"><label>🌗</label><select id="theme" onchange="applyTheme()"><option value="tg">Telegram</option><option value="light">Light</option><option value="dark">Dark</option></select>
+<input type="color" id="accent" value="#2a8bf2" onchange="applyTheme()" style="height:44px"></div><p class="hint" id="mode"></p></section>
+
+<section id="admin"><div class="card" id="apanel">…</div>
+<div class="card"><b>📦 Update</b><input type="file" id="pkg" accept=".gz,.tgz,application/gzip"><input id="pkgsha" placeholder="SHA-256 (optional)">
+<button class="b" onclick="admUpdate()">⬆️ Update</button>
+<div class="row"><button class="b b2" onclick="admCmd('adm_rollback')">⏪ Rollback</button><button class="b b2" onclick="admCmd('adm_restart')">🔄 Restart</button></div>
+<div class="row"><button class="b b2" onclick="call({a:'admin_cmd',cmd:'open'}).then(loadAdmin)">Open</button><button class="b b2" onclick="call({a:'admin_cmd',cmd:'allowlist'}).then(loadAdmin)">Allowlist</button><button class="b b2" onclick="call({a:'admin_cmd',cmd:'force_off'}).then(loadAdmin)">Force-sub off</button></div></div></section>
+
+<script>
+const tg=window.Telegram.WebApp;tg.ready();tg.expand();
+const $=id=>document.getElementById(id);
+const QS=new URLSearchParams(location.search);
+let API=QS.get('api')||(/trycloudflare\.com$/.test(location.hostname)||location.pathname.startsWith('/app')?location.origin:null);
+const TGL=((tg.initDataUnsafe.user||{}).language_code||'en').split('-')[0];
+let L=localStorage.getItem('es_lang')||TGL;
+const S={
+en:{dl:'Download',ai:'AI',img:'Image',tools:'Tools',pray:'Prayer',yt:'YouTube',fun:'Fun',set:'Settings',admin:'Admin',
+dl_t:'Download center',dl_h:'Paste a link (YouTube, Instagram, TikTok…) or type a name. Pick a quality – the file arrives in the chat.',dl_p:'Link or name…',find:'🔎 Find / qualities',queue:'📥 Queue & history',
+ask:'Ask anything…',send:'Send',web:'🌍 Web search',ai_h:'DeepSeek AI with memory. 🧹 = new chat, 🎙 = voice chat.',img_p:'Describe the image…',create:'🎨 Create',to_chat:'📨 To chat',
+translate:'Translate',bot_tools:'🛠 All bot tools',bot_tools_h:'Tools that need files open in the chat.',city:'City',show:'Show',compass:'🧭 Qibla compass',yt_p:'Search YouTube…',search:'Search',
+games:'🎮 Games',lang:'Language',persona:'AI personality',mode:'Text messages go to',voice_reply:'Voice replies',picker:'Quality picker',private:'Private mode (auto-delete)',save:'Save',
+live:'🟢 Live mode',offline:'🔴 Bot server not reachable. Results will be sent to the chat. Send /app to the bot for a fresh button.',sent:'📨 Sent to chat',login:'🔐 Log in to YouTube',
+liked:'👍 Liked',subs:'📺 Subscriptions',pls:'📂 Playlists',nooauth:'YouTube account login is not configured by the owner.',auto:'Auto (Telegram)',mp3:'🎵 MP3',best:'⚡ Best',empty:'Empty',saved:'✅ Saved'},
+tr:{dl:'İndir',ai:'Yapay zekâ',img:'Resim',tools:'Araçlar',pray:'Namaz',yt:'YouTube',fun:'Eğlence',set:'Ayarlar',admin:'Yönetici',
+dl_t:'İndirme merkezi',dl_h:'Bağlantı yapıştırın (YouTube, Instagram, TikTok…) ya da ad yazın. Kaliteyi seçin – dosya sohbete gelir.',dl_p:'Bağlantı veya ad…',find:'🔎 Bul / kaliteler',queue:'📥 Sıra ve geçmiş',
+ask:'Bir şey sorun…',send:'Gönder',web:'🌍 Web araması',ai_h:'Hafızalı DeepSeek. 🧹 = yeni sohbet, 🎙 = sesli sohbet.',img_p:'Resmi tarif edin…',create:'🎨 Oluştur',to_chat:'📨 Sohbete',
+translate:'Çevir',bot_tools:'🛠 Tüm bot araçları',bot_tools_h:'Dosya gerektiren araçlar sohbette açılır.',city:'Şehir',show:'Göster',compass:'🧭 Kıble pusulası',yt_p:'YouTube\'da ara…',search:'Ara',
+games:'🎮 Oyunlar',lang:'Dil',persona:'Yapay zekâ kişiliği',mode:'Metin mesajları',voice_reply:'Sesli yanıt',picker:'Kalite seçici',private:'Gizli mod (otomatik sil)',save:'Kaydet',
+live:'🟢 Canlı mod',offline:'🔴 Bot sunucusuna ulaşılamıyor. Sonuçlar sohbete gönderilir. Yeni düğme için bota /app yazın.',sent:'📨 Sohbete gönderildi',login:'🔐 YouTube girişi',
+liked:'👍 Beğenilenler',subs:'📺 Abonelikler',pls:'📂 Oynatma listeleri',nooauth:'YouTube hesabı girişi sahibi tarafından ayarlanmamış.',auto:'Otomatik (Telegram)',mp3:'🎵 MP3',best:'⚡ En iyi',empty:'Boş',saved:'✅ Kaydedildi'},
+ru:{dl:'Скачать',ai:'ИИ',img:'Картинка',tools:'Инструменты',pray:'Намаз',yt:'YouTube',fun:'Развлечения',set:'Настройки',admin:'Админ',
+dl_t:'Центр загрузок',dl_h:'Вставьте ссылку (YouTube, Instagram, TikTok…) или название. Выберите качество – файл придёт в чат.',dl_p:'Ссылка или название…',find:'🔎 Найти / качество',queue:'📥 Очередь и история',
+ask:'Спросите что угодно…',send:'Отправить',web:'🌍 Поиск в сети',ai_h:'DeepSeek с памятью. 🧹 = новый чат, 🎙 = голос.',img_p:'Опишите картинку…',create:'🎨 Создать',to_chat:'📨 В чат',
+translate:'Перевести',bot_tools:'🛠 Все инструменты',bot_tools_h:'Инструменты с файлами открываются в чате.',city:'Город',show:'Показать',compass:'🧭 Компас киблы',yt_p:'Поиск на YouTube…',search:'Искать',
+games:'🎮 Игры',lang:'Язык',persona:'Характер ИИ',mode:'Текстовые сообщения',voice_reply:'Голосовые ответы',picker:'Выбор качества',private:'Приватный режим',save:'Сохранить',
+live:'🟢 Онлайн',offline:'🔴 Сервер бота недоступен. Результаты придут в чат. Отправьте боту /app.',sent:'📨 Отправлено в чат',login:'🔐 Войти в YouTube',
+liked:'👍 Понравившиеся',subs:'📺 Подписки',pls:'📂 Плейлисты',nooauth:'Вход в YouTube не настроен владельцем.',auto:'Авто (Telegram)',mp3:'🎵 MP3',best:'⚡ Лучшее',empty:'Пусто',saved:'✅ Сохранено'},
+tg:{dl:'Боргирӣ',ai:'ЗС',img:'Расм',tools:'Асбобҳо',pray:'Намоз',yt:'YouTube',fun:'Фароғат',set:'Танзимот',admin:'Админ',
+dl_t:'Маркази боргирӣ',dl_h:'Пайванд гузоред ё ном нависед. Сифатро интихоб кунед – файл ба чат меояд.',dl_p:'Пайванд ё ном…',find:'🔎 Ёфтан / сифат',queue:'📥 Навбат ва таърих',
+ask:'Савол диҳед…',send:'Фиристодан',web:'🌍 Ҷустуҷӯ дар веб',ai_h:'DeepSeek бо хотира. 🧹 = чати нав, 🎙 = овоз.',img_p:'Расмро тасвир кунед…',create:'🎨 Сохтан',to_chat:'📨 Ба чат',
+translate:'Тарҷума',bot_tools:'🛠 Ҳамаи асбобҳо',bot_tools_h:'Асбобҳои файлдор дар чат кушода мешаванд.',city:'Шаҳр',show:'Нишон додан',compass:'🧭 Қутбнамои қибла',yt_p:'Ҷустуҷӯ дар YouTube…',search:'Ҷустуҷӯ',
+games:'🎮 Бозиҳо',lang:'Забон',persona:'Хислати ЗС',mode:'Паёмҳои матнӣ',voice_reply:'Ҷавоби овозӣ',picker:'Интихоби сифат',private:'Ҳолати махфӣ',save:'Нигоҳ доштан',
+live:'🟢 Зинда',offline:'🔴 Сервери бот дастрас нест. Натиҷаҳо ба чат меоянд. Ба бот /app фиристед.',sent:'📨 Ба чат фиристода шуд',login:'🔐 Ворид ба YouTube',
+liked:'👍 Писандида',subs:'📺 Обунаҳо',pls:'📂 Рӯйхатҳо',nooauth:'Вуруд ба YouTube танзим нашудааст.',auto:'Худкор (Telegram)',mp3:'🎵 MP3',best:'⚡ Беҳтарин',empty:'Холӣ',saved:'✅ Нигоҳ дошта шуд'},
+uz:{dl:'Yuklash',ai:'AI',img:'Rasm',tools:'Vositalar',pray:'Namoz',yt:'YouTube',fun:'Ko\'ngilochar',set:'Sozlamalar',admin:'Admin',
+dl_t:'Yuklab olish markazi',dl_h:'Havolani qo\'ying yoki nom yozing. Sifatni tanlang – fayl chatga keladi.',dl_p:'Havola yoki nom…',find:'🔎 Topish / sifat',queue:'📥 Navbat va tarix',
+ask:'Savol bering…',send:'Yuborish',web:'🌍 Internetda qidirish',ai_h:'Xotirali DeepSeek. 🧹 = yangi chat, 🎙 = ovoz.',img_p:'Rasmni tasvirlang…',create:'🎨 Yaratish',to_chat:'📨 Chatga',
+translate:'Tarjima',bot_tools:'🛠 Barcha vositalar',bot_tools_h:'Fayl talab qiladigan vositalar chatda ochiladi.',city:'Shahar',show:'Ko\'rsatish',compass:'🧭 Qibla kompasi',yt_p:'YouTube\'da qidirish…',search:'Qidirish',
+games:'🎮 O\'yinlar',lang:'Til',persona:'AI xarakteri',mode:'Matnli xabarlar',voice_reply:'Ovozli javob',picker:'Sifat tanlash',private:'Maxfiy rejim',save:'Saqlash',
+live:'🟢 Jonli',offline:'🔴 Bot serveriga ulanib bo\'lmadi. Natijalar chatga yuboriladi. Botga /app yozing.',sent:'📨 Chatga yuborildi',login:'🔐 YouTube\'ga kirish',
+liked:'👍 Yoqqanlar',subs:'📺 Obunalar',pls:'📂 Pleylistlar',nooauth:'YouTube kirishi sozlanmagan.',auto:'Avto (Telegram)',mp3:'🎵 MP3',best:'⚡ Eng yaxshi',empty:'Bo\'sh',saved:'✅ Saqlandi'}};
+let D=Object.assign({},S.en,S[L]||{});
+function t(k){return D[k]||S.en[k]||k}
+function applyI18n(){document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));
+  document.querySelectorAll('[data-p]').forEach(e=>e.placeholder=t(e.dataset.p));renderTabs()}
+async function loadLang(){D=Object.assign({},S.en,S[L]||{});applyI18n();
+  if(!S[L]&&API){const c=localStorage.getItem('es_i18n_'+L);if(c){Object.assign(D,JSON.parse(c));applyI18n();return}
+    const r=await call({a:'i18n',lang:L,s:S.en});if(r.s){localStorage.setItem('es_i18n_'+L,JSON.stringify(r.s));Object.assign(D,r.s);applyI18n()}}}
+const TABS=[['dl','📥'],['ai','🤖'],['img','🎨'],['tools','🛠'],['pray','🕌'],['yt','▶️'],['fun','🎲'],['set','⚙️']];
+let isAdmin=false,cur='dl';
+function renderTabs(){const h=$('tabs');h.innerHTML='';(isAdmin?TABS.concat([['admin','👑']]):TABS).forEach(([id,e])=>{
+  const b=document.createElement('button');b.textContent=e+' '+t(id);b.id='t_'+id;b.onclick=()=>show(id);if(id==cur)b.className='on';h.appendChild(b)})}
+function show(id){cur=id;document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));
+  document.querySelectorAll('header button').forEach(b=>b.classList.toggle('on',b.id=='t_'+id));
+  if(id=='dl')loadQueue();if(id=='admin')loadAdmin();if(id=='yt')loadYtAcc()}
+function banner(txt,color){const b=$('banner');b.textContent=txt;b.style.background=color;b.className=txt?'on':''}
+function noLinks(s){return String(s||'').replace(/\b(?:https?:\/\/|www\.)\S+/gi,'').replace(/<[^>]+>/g,'')}
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+async function call(d,timeout){
+  if(API){const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),timeout||180000);
+    try{const r=await fetch(API.replace(/\/$/,'')+'/api',{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json','X-Init-Data':tg.initData},body:JSON.stringify(d)});
+      clearTimeout(tm);if(r.status==401)return{error:'auth (open the app from the bot)'};return await r.json()}catch(e){clearTimeout(tm);return{error:'offline'}}}
+  if(tg.sendData&&['dl','ai','web','img','set','rates','crypto','weather','news','game','tool'].includes(d.a)){try{tg.sendData(JSON.stringify(d));return{sent:true}}catch(e){}}
+  return{error:'offline'}}
+async function probe(){if(!API){banner(t('offline'),'#c0392b33');return}
+  try{const r=await fetch(API.replace(/\/$/,'')+'/health',{cache:'no-store'});const j=await r.json();if(j.app!='esanali')throw 0;banner('','');$('mode').textContent=t('live')}
+  catch(e){banner(t('offline'),'#c0392b33');API=null}}
+// ---- download ----
+async function dlInfo(){const q=$('dlq').value.trim();if(!q)return;const box=$('dlres');box.innerHTML='<div class="card">⏳</div>';
+  const r=await call({a:'dl_info',q});box.innerHTML='';
+  if(r.sent){box.append(el('div','card',t('sent')));return}
+  if(r.items){r.items.forEach(it=>{const d=el('div','item','🎬 '+it.title+' ('+it.dur+')');d.onclick=()=>{$('dlq').value=it.id;dlInfo()};box.append(d)});return}
+  if(r.error){box.append(el('div','card','⚠️ '+r.error));return}
+  const c=el('div','card');c.append(el('b',null,r.title),el('div','hint',r.dur||''));const g=el('div','grid');g.style.marginTop='8px';
+  (r.q||[]).forEach(x=>{const b=el('button','b','🎬 '+x.label+' · '+x.size);b.onclick=()=>go({a:'dl_go',tok:x.tok});g.append(b)});
+  const m=el('button','b b2',t('mp3'));m.onclick=()=>go({a:'dl_go',vid:r.vid,kind:'a'});g.append(m);
+  const a=el('button','b b2',t('best'));a.onclick=()=>go({a:'dl_go',vid:r.vid,kind:r.generic?'media':'v'});g.append(a);c.append(g);box.append(c)}
+async function go(d){const r=await call(d);if(r.ok){tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('success');tg.showAlert('📥 ✓');loadQueue()}else tg.showAlert('⚠️ '+(r.error||''))}
+async function loadQueue(){if(!API)return;const r=await call({a:'queue'});const b=$('qbox');b.innerHTML='';
+  (r.queue||[]).forEach((x,i)=>b.append(el('div',null,(i?'⏳ ':'⬇️ ')+x)));
+  (r.history||[]).forEach(h=>b.append(el('div',null,(h.kind=='a'?'🎵 ':'🎬 ')+h.title)));if(!b.childNodes.length)b.textContent=t('empty')}
+$('dlq').addEventListener('keyup',e=>{if(e.key=='Enter')dlInfo()});
+// ---- AI ----
+function addMsg(s,me){const d=el('div','msg '+(me?'me':'bot'),noLinks(s));$('chat').append(d);d.scrollIntoView()}
+async function askAI(){const q=$('aiq').value.trim();if(!q)return;$('aiq').value='';addMsg(q,true);const r=await call({a:'ai',q});
+  if(r.text)addMsg(r.text);else addMsg(r.sent?t('sent'):'⚠️ '+(r.error||''))}
+async function webSearch(){const q=$('aiq').value.trim();if(!q)return;$('aiq').value='';addMsg('🌍 '+q,true);const r=await call({a:'web',q});
+  if(r.text)addMsg(r.text+((r.sources||[]).length?'\n\n📚 '+r.sources.map(noLinks).join('\n📚 '):''));else addMsg(r.sent?t('sent'):'⚠️ '+(r.error||''))}
+function newChat(){$('chat').innerHTML='';call({a:'ai_new'})}
+async function recordToggle(btn,onDone){if(!API){tg.showAlert(t('offline'));return}
+  if(window._rec&&_rec.state=='recording'){_rec.stop();btn.textContent='⏳';return}
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(st);const ch=[];window._rec=rec;
+    rec.ondataavailable=e=>ch.push(e.data);rec.onstop=()=>{st.getTracks().forEach(x=>x.stop());const fr=new FileReader();
+      fr.onload=()=>onDone(fr.result);fr.readAsDataURL(new Blob(ch,{type:rec.mimeType||'audio/webm'}))};rec.start();btn.textContent='⏹'}
+  catch(e){tg.showAlert('🎙 '+e.message)}}
+function toggleVoice(){const b=$('vbtn');recordToggle(b,async a=>{const r=await call({a:'voice',audio:a});if(r.you)addMsg(r.you,true);if(r.text)addMsg(r.text);
+  if(r.audio)new Audio(r.audio).play().catch(()=>{});if(r.error)addMsg('⚠️ '+r.error);b.textContent='🎙'})}
+// ---- image ----
+async function genImg(toChat){const q=$('iq').value.trim();if(!q)return;const box=$('ires');box.innerHTML='<div class="card">⏳</div>';
+  const [w,h]=$('isz').value.split('x').map(Number);const r=await call({a:'img',q,w,h,to_chat:toChat});box.innerHTML='';
+  if(r.image){const im=el('img');im.src=r.image;im.style.width='100%';im.style.borderRadius='12px';box.append(im)}
+  else box.append(el('div','card',r.ok||r.sent?t('sent'):(r.error=='blocked'?'🚫':'⚠️ '+(r.error||''))))}
+// ---- tools ----
+const LANGS=[['en','English'],['tr','Türkçe'],['ru','Русский'],['tg','Тоҷикӣ'],['uz','Oʻzbek'],['fa','فارسی'],['ar','العربية'],['de','Deutsch'],['fr','Français'],['es','Español'],['zh','中文'],['ja','日本語'],['ko','한국어'],['hi','हिन्दी'],['it','Italiano'],['az','Azərbaycan'],['kk','Қазақ'],['ky','Кыргыз']];
+LANGS.forEach(([c,n])=>{$('trl').append(new Option(n,c))});$('trl').value=TGL=='en'?'tr':'en';
+async function doTr(){const q=$('trq').value.trim();if(!q)return;$('trres').textContent='⏳';const r=await call({a:'translate',q,lang:$('trl').value});$('trres').textContent=r.text?noLinks(r.text):'⚠️ '+(r.error||'')}
+async function doTTS(){const q=($('trres').textContent.trim()&&!$('trres').textContent.startsWith('⚠')?$('trres').textContent:$('trq').value).trim();if(!q)return;
+  const r=await call({a:'tts',q,lang:$('trl').value});if(r.audio){const a=$('ttsa');a.src=r.audio;a.style.display='block';a.play().catch(()=>{})}else tg.showAlert('⚠️ '+(r.error||''))}
+function toggleSTT(){const b=$('sttbtn');recordToggle(b,async a=>{const r=await call({a:'stt',audio:a});$('trq').value=r.text||('⚠️ '+(r.error||''));b.textContent='🎤 STT'})}
+[['rates','💱'],['crypto','🪙'],['weather','🌤'],['news','📰']].forEach(([a,e])=>{const b=el('button','b',e+' '+a);b.onclick=async()=>{$('ires2').textContent='⏳';
+  const r=await call({a,q:a=='weather'?($('city').value||''):''});$('ires2').textContent=r.text?noLinks(r.text):(r.sent?t('sent'):'⚠️ '+(r.error||''))};$('infogrid').append(b)});
+let ACTS=[];
+async function loadActions(){if(!API)return;const r=await call({a:'actions'});ACTS=r.actions||[];renderTools();renderGames()}
+function renderTools(){const f=$('tfilter').value.toLowerCase();const g=$('toolgrid');g.innerHTML='';
+  ACTS.filter(x=>x.cat!='fun'&&x.label.toLowerCase().includes(f)).forEach(x=>{const b=el('button','b b2',x.label);b.onclick=()=>openAct(x.id);g.append(b)})}
+function renderGames(){const g=$('gamegrid');g.innerHTML='';ACTS.filter(x=>x.cat=='fun').forEach(x=>{const b=el('button','b b2',x.label);b.onclick=()=>openAct(x.id);g.append(b)})}
+async function openAct(id){const r=await call({a:'open',t:id});if(r.ok||r.sent){tg.showAlert(t('sent'));} else tg.showAlert('⚠️ '+(r.error||''))}
+// ---- prayer ----
+let QIBLA=null;
+function showPrayer(r){const p=$('pres');p.style.display='block';if(r.error||!r.times){p.textContent='⚠️ '+(r.error||'');return}
+  const N={Fajr:'🌅 Fajr',Sunrise:'☀️ Sunrise',Dhuhr:'🕛 Dhuhr',Asr:'🌤 Asr',Maghrib:'🌇 Maghrib',Isha:'🌙 Isha'};
+  p.textContent='🕌 '+r.city+' · '+r.hijri+'\n'+Object.entries(r.times).map(([k,v])=>N[k]+': '+v).join('\n')+'\n🕋 Qibla: '+Math.round(r.qibla)+'°';
+  QIBLA=r.qibla;$('needle').style.transform='rotate('+QIBLA+'deg)'}
+async function loadPrayer(){showPrayer(await call({a:'prayer',q:$('pcity').value.trim()}))}
+function geoPrayer(){navigator.geolocation.getCurrentPosition(async p=>showPrayer(await call({a:'prayer',lat:p.coords.latitude,lon:p.coords.longitude})),e=>tg.showAlert('📍 '+e.message))}
+function startCompass(){const h=e=>{let hd=e.webkitCompassHeading!=null?e.webkitCompassHeading:(e.absolute||e.alpha!=null?360-e.alpha:null);
+  if(hd==null||QIBLA==null)return;$('needle').style.transform='rotate('+((QIBLA-hd+360)%360)+'deg)';$('qhint').textContent='🧭 '+Math.round(hd)+'°'};
+  const add=()=>{window.addEventListener('deviceorientationabsolute',h);window.addEventListener('deviceorientation',h)};
+  if(typeof DeviceOrientationEvent!='undefined'&&DeviceOrientationEvent.requestPermission)DeviceOrientationEvent.requestPermission().then(s=>s=='granted'&&add());else add();
+  if(QIBLA==null)loadPrayer()}
+// ---- YouTube ----
+function vidList(items,box){box.innerHTML='';const c=el('div','card');(items||[]).forEach(it=>{const d=el('div','item',(it.pl?'📂 ':it.ch?'📺 ':'🎬 ')+it.title+(it.dur?' ('+it.dur+')':''));
+  d.onclick=()=>{if(it.pl)ytAcc('pl',it.pl);else if(it.ch)ytAcc('ch',it.ch);else{$('dlq').value=it.id;show('dl');dlInfo()}};c.append(d)});if(!(items||[]).length)c.textContent=t('empty');box.append(c)}
+async function ytSearch(){const q=$('ytq').value.trim();if(!q)return;$('ytres').innerHTML='<div class="card">⏳</div>';const r=await call({a:'yt',q});vidList(r.items,$('ytres'))}
+$('ytq').addEventListener('keyup',e=>{if(e.key=='Enter')ytSearch()});
+async function loadYtAcc(){if(!API)return;const b=$('ytacc');const r=await call({a:'yt_acc',w:'status'});b.innerHTML='';
+  if(r.error=='oauth_not_configured'){b.append(el('div','hint',t('nooauth')));return}
+  if(!r.login){const x=el('button','b',t('login'));x.onclick=()=>openAct('yt_login');b.append(x);return}
+  const g=el('div','grid');[['liked','liked'],['subs','subs'],['pls','pls']].forEach(([w,k])=>{const x=el('button','b b2',t(k));x.onclick=()=>ytAcc(w);g.append(x)});b.append(g)}
+async function ytAcc(w,id){$('ytres').innerHTML='<div class="card">⏳</div>';const r=await call({a:'yt_acc',w,id});if(r.login===false){loadYtAcc();$('ytres').innerHTML='';return}vidList(r.items,$('ytres'))}
+// ---- fun ----
+[['joke','😂'],['fact','💡'],['quote','💬'],['riddle','🧩'],['compliment','🌸'],['dice','🎲'],['coin','🪙'],['num','🔢']].forEach(([k,e])=>{const b=el('button','b',e+' '+k);
+  b.onclick=async()=>{const p=$('funres');p.style.display='block';p.textContent='⏳';const r=await call({a:'fun',k});p.textContent=r.text?noLinks(r.text):'⚠️ '+(r.error||'')};$('fungrid').append(b)});
+// ---- settings ----
+$('lang').append(new Option('🌐 '+t('auto')+' ('+TGL+')',''));LANGS.forEach(([c,n])=>$('lang').append(new Option(n,c)));
+async function loadSet(){if(!API)return;const r=await call({a:'get'});const s=r.settings||{};
+  for(const k of ['persona','text_mode','city'])if(s[k]!=null)$(k).value=s[k];$('lang').value=s.lang||'';
+  for(const k of ['voice_reply','picker'])$(k).checked=!!s[k];$('private').checked=!!s.private;if(s.city&&!$('pcity').value)$('pcity').value=s.city;
+  const nl=s.lang||TGL;if(nl!=L){L=nl;loadLang()}}
+async function saveSet(){const sets=[['lang',$('lang').value||null],['persona',$('persona').value],['text_mode',$('text_mode').value],['voice_reply',$('voice_reply').checked],
+  ['picker',$('picker').checked],['private',$('private').checked?10:0],['city',$('city').value]];
+  L=$('lang').value||TGL;localStorage.setItem('es_lang',L);loadLang();
+  if(API){for(const [k,v] of sets)await call({a:'set',k,v});tg.showAlert(t('saved'))}else tg.sendData(JSON.stringify({a:'set',k:'bulk',v:sets}))}
+function applyTheme(){const th=$('theme').value,a=$('accent').value,r=document.documentElement.style;localStorage.setItem('es_theme',th);localStorage.setItem('es_accent',a);
+  const P={light:['#ffffff','#111111','#f2f3f5','#888888'],dark:['#17212b','#f5f5f5','#232e3c','#8a99a8']}[th];
+  ['--bg','--tx','--card','--hint'].forEach((k,i)=>P?r.setProperty(k,P[i]):r.removeProperty(k));r.setProperty('--btn',a)}
+(function(){const th=localStorage.getItem('es_theme'),a=localStorage.getItem('es_accent');if(th)$('theme').value=th;if(a)$('accent').value=a;if(th||a)applyTheme()})();
+// ---- admin ----
+async function loadAdmin(){const x=await call({a:'adm_info'});const p=$('apanel');if(x.error){p.textContent='⛔ '+x.error;return}
+  p.innerHTML='';p.append(el('b',null,'v'+x.version+' · 👥 '+x.users+' · 24h '+x.active24+' · jobs '+x.jobs),
+   el('div','hint','⏱ '+Math.round(x.uptime/60)+' min · '+(x.tunnel?'🟢 tunnel':'🔴 no tunnel')+' · '+x.frontend+' · access '+x.access+' · force-sub '+(x.force_sub||'-')),
+   el('pre','pre',JSON.stringify(x.stats,null,1)),el('div','hint','backups: '+(x.backups||[]).join(', '))) }
+async function admCmd(a){if(!confirm(a+'?'))return;const r=await call({a});tg.showAlert(r.ok?'✅ '+(r.text||''):'⚠️ '+(r.error||''))}
+function admUpdate(){const f=$('pkg').files[0];if(!f)return;const fr=new FileReader();fr.onload=async()=>{tg.showAlert('⬆️ …');
+  const r=await call({a:'adm_update',file:fr.result,sha:$('pkgsha').value.trim()},900000);tg.showAlert(r.ok?'✅ restart':'⚠️ '+(r.error||'failed'))};fr.readAsDataURL(f)}
+// ---- boot ----
+(async()=>{applyI18n();show('dl');await probe();await loadLang();
+  if(API){const r=await call({a:'adm_info'});if(r&&!r.error){isAdmin=true;renderTabs()}loadSet();loadActions();loadQueue()}})();
 </script></body></html>
